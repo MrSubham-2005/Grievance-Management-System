@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Staff Dashboard - GMS</title>
+
+        <link rel="stylesheet" href="../../CSS/style.css">
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </head>
+
+    <body class="hide-search-page">
+
+        <div class="admin-container">
+
+            <aside class="sidebar">
+
+                <div class="sidebar-brand">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>GMS Staff</span>
+                </div>
+
+                <ul class="sidebar-menu">
+                    <li class="sidebar-item active">
+                        <a href="staff_dashboard.html">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="view_assigned_complaints.html">
+                            <i class="fa-solid fa-clipboard-check"></i>
+                            <span>View Assigned Complaints</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="update_complaint.html">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                            <span>Update Complaint</span>
+                        </a>
+                    </li>
+
+                </ul>
+
+            </aside>    
+
+            <nav class="navbar">
+
+                <div class="navbar-title">
+                    <h2>Staff Panel</h2>
+                </div>
+
+                <div class="navbar-right">
+
+                    <div class="navbar-search">
+                        <input type="text" id="staffsearchInput" placeholder="Search complaints, students...">
+                    </div>
+
+                    <div class="navbar-profile-container">
+
+                        <div class="navbar-profile" id="profileTrigger">
+                            <i class="fa-solid fa-circle-user profile-icon"></i>
+                            <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                        </div>
+
+                        <div class="profile-dropdown" id="profileDropdown">
+
+                            <div class="dropdown-header">
+                                <h4 id="staffName"></h4>
+                                <span class="dropdown-role">Staff</span>
+                            </div>
+
+                            <div class="dropdown-body">
+
+                                <div class="info-item">
+                                    <i class="fa-solid fa-building"></i>
+                                    <span id="staffDepartment"></span>
+                                </div>
+
+                                <div class="info-item">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <span id="staffMobile"></span>
+                                </div>
+
+                                <div class="info-item">
+                                    <i class="fa-solid fa-envelope"></i>
+                                    <span id="staffEmail"></span>
+                                </div>
+
+                                <div class="info-item">
+                                    <i class="fa-solid fa-star"></i>
+                                    <span id="staffRating"></span>
+                                </div>
+
+                            </div>
+
+                            <hr class="dropdown-divider">
+
+                            <ul class="dropdown-menu-links">
+                                <li>
+                                    <a href="staff_change_password.html">
+                                        <i class="fa-solid fa-lock"></i>
+                                        <span>Change Password</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="../../Home.html" class="logout-link">
+                                        <i class="fa-solid fa-right-from-bracket"></i>
+                                        <span>Logout</span>
+                                    </a>
+                                </li>
+                            </ul>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </nav>
+
+            <main class="main-content">
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div>
+                        <h2>Welcome Back, <span id="welcomeStaffName"></span>!</h2>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">
+                            Manage assigned complaints and update their status efficiently.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+
+                    <div class="card card-total">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-file-circle-exclamation"></i>
+                        </div>
+
+                        <div class="card-content">
+                            <span class="card-title">Total Complaints</span>
+                            <span class="card-value" id="staffTotalComplaints"></span>
+                        </div>
+                    </div>
+
+                    <div class="card card-pending">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-hourglass-half"></i>
+                        </div>
+
+                        <div class="card-content">
+                            <span class="card-title">Pending</span>
+                            <span class="card-value" id="staffPendingComplaints"></span>
+                        </div>
+                    </div>
+
+                    <div class="card card-progress">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-spinner"></i>
+                        </div>
+
+                        <div class="card-content">
+                            <span class="card-title">In Progress</span>
+                            <span class="card-value" id="staffProgressComplaints"></span>
+                        </div>
+                    </div>
+
+                    <div class="card card-resolved">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+
+                        <div class="card-content">
+                            <span class="card-title">Resolved</span>
+                            <span class="card-value" id="staffResolvedComplaints"></span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="table-container">
+
+                    <div class="table-header">
+                        <h2>Recent Complaints</h2>
+                    </div>
+
+                    <table class="custom-table">
+
+                        <thead>
+                            <tr>
+                                <th>Complaint ID</th>
+                                <th>Student ID</th>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Description</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="recentComplaintsBody">
+                            
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </main>
+
+        </div>
+
+        <script src="/gms-api.js"></script>
+        <script>
+
+            document.addEventListener("DOMContentLoaded", function () {
+
+                // ===============================
+                // Profile Dropdown Toggle
+                // ===============================
+
+                const profile = document.getElementById("profileTrigger");
+                const dropdown = document.getElementById("profileDropdown");
+
+                if (profile && dropdown) {
+
+                    profile.addEventListener("click", function (e) {
+                        e.stopPropagation();
+                        dropdown.classList.toggle("show");
+                        profile.classList.toggle("active");
+                    });
+
+                    document.addEventListener("click", function (e) {
+                        if (!profile.contains(e.target) && !dropdown.contains(e.target)) {
+                            dropdown.classList.remove("show");
+                            profile.classList.remove("active");
+                        }
+                    });
+
+                }
+                
+
+                // ===============================
+                // Fetch Staff Profile
+                // ===============================
+
+                fetch("/api/staff/profile")
+                .then(res => res.json())
+                .then(data => {
+
+                    document.getElementById("staffName").textContent = data.staffName;
+                    document.getElementById("welcomeStaffName").textContent = data.staffName.split(" ")[0];
+                    document.getElementById("staffDepartment").textContent = data.department;
+                    document.getElementById("staffMobile").textContent = data.mobile;
+                    document.getElementById("staffEmail").innerHTML = data.email.replace("@","@<wbr>");
+                    document.getElementById("staffRating").textContent = data.rating + " / 5";
+
+                });
+
+
+                // =====================================
+                // Wrap Description
+                // =====================================
+
+                function wrapText(text, limit) {
+
+                    let words = text.split(" ");
+                    let line = "";
+                    let result = "";
+
+                    words.forEach(function(word){
+
+                        if((line + word).length > limit){
+
+                            result += line + "<br>";
+                            line = word + " ";
+
+                        }else{
+
+                            line += word + " ";
+
+                        }
+
+                    });
+
+                    return result + line;
+
+                }
+
+
+                // ===============================
+                // Fetch Dashboard Data
+                // ===============================
+
+                function loadDashboard() {
+                    fetch("/api/staff/dashboard")
+    
+                    .then(response => {
+    
+                        if (!response.ok) {
+                            throw new Error("Unable to fetch dashboard data.");
+                        }
+    
+                        return response.json();
+    
+                    })
+    
+                    .then(data => {
+    
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+    
+                        // Dashboard Cards
+    
+                        document.getElementById("staffTotalComplaints").textContent =
+                            data.totalComplaints || 0;
+    
+                        document.getElementById("staffPendingComplaints").textContent =
+                            data.pendingComplaints || 0;
+    
+                        document.getElementById("staffProgressComplaints").textContent =
+                            data.inProgressComplaints || 0;
+    
+                        document.getElementById("staffResolvedComplaints").textContent =
+                            data.resolvedComplaints || 0;
+    
+    
+                        // Recent Complaints
+    
+                        const tbody = document.getElementById("recentComplaintsBody");
+    
+                        tbody.innerHTML = "";
+    
+                        if (data.recentComplaints && data.recentComplaints.length > 0) {
+    
+                            data.recentComplaints.forEach(function (complaint) {
+    
+                                let badgeClass = "";
+    
+                                switch ((complaint.status || "").toLowerCase()) {
+    
+                                    case "pending":
+                                        badgeClass = "badge-pending";
+                                        break;
+    
+                                    case "assigned":
+                                        badgeClass = "badge-assigned";
+                                        break;
+    
+                                    case "in progress":
+                                        badgeClass = "badge-in-progress";
+                                        break;
+    
+                                    case "resolved":
+                                        badgeClass = "badge-resolved";
+                                        break;
+    
+                                    default:
+                                        badgeClass = "";
+                                }
+    
+                                tbody.innerHTML += `
+                                    <tr>
+                                        <td>${complaint.complaintId}</td>
+                                        <td>${complaint.studentId}</td>
+                                        <td>${complaint.studentName}</td>
+                                        <td>${complaint.category}</td>
+                                        <td>${wrapText(complaint.description || "", 50)}</td>
+                                        <td>${complaint.date}</td>
+                                        <td>
+                                            <span class="badge ${badgeClass}">
+                                                ${complaint.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                `;
+    
+                            });
+    
+                        } else {
+    
+                            tbody.innerHTML = `
+                                <tr>
+                                    <td colspan="7" style="text-align:center;">
+                                        No complaints found.
+                                    </td>
+                                </tr>
+                            `;
+    
+                        }
+    
+                    })
+    
+                    .catch(error => {
+    
+                        console.error(error);
+    
+                        document.getElementById("staffTotalComplaints").textContent = "0";
+                        document.getElementById("staffPendingComplaints").textContent = "0";
+                        document.getElementById("staffProgressComplaints").textContent = "0";
+                        document.getElementById("staffResolvedComplaints").textContent = "0";
+    
+                    });
+                }
+
+                loadDashboard();
+                setInterval(loadDashboard, 15000);
+
+                // =====================================
+                // Success / Error Popup
+                // =====================================
+
+                const params=new URLSearchParams(window.location.search);
+
+                if(params.has("success")){
+
+                    alert(params.get("success"));
+
+                }
+
+                if(params.has("error")){
+
+                    alert(params.get("error"));
+
+                }
+
+                window.history.replaceState({}, document.title, window.location.pathname);
+
+            });
+
+        </script>
+
+    </body>
+
+</html>

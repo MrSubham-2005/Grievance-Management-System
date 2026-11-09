@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Student Dashboard - GMS</title>
+
+        <link rel="stylesheet" href="../../CSS/style.css">
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </head>
+
+    <body class="hide-search-page">
+
+        <div class="admin-container">
+
+            <aside class="sidebar">
+                <div class="sidebar-brand">
+                    <i class="fa-solid fa-user-graduate"></i>
+                    <span>GMS Students</span>
+                </div>
+
+                <ul class="sidebar-menu">
+                    <li class="sidebar-item active">
+                        <a href="student_dashboard.html">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="raise_complaint.html">
+                            <i class="fa-solid fa-file-circle-plus"></i>
+                            <span>Raise Complaint</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="view_complaint_status.html">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span>View Complaint Status</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="feedback.html">
+                            <i class="fa-solid fa-comment"></i>
+                            <span>Feedback</span>
+                        </a>
+                    </li>
+
+                </ul>
+            </aside>   
+        
+            <nav class="navbar">
+
+                <div class="navbar-title">
+                    <h2>Student Panel</h2>
+                </div>
+
+                <div class="navbar-right">
+
+                    <div class="navbar-search">
+                        <input type="text" id="studentSearchInput" placeholder="Search complaints, students...">
+                    </div>
+
+                    <div class="navbar-profile-container">
+
+                        <div class="navbar-profile" id="profileTrigger">
+                            <i class="fa-solid fa-circle-user profile-icon"></i>
+                            <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                        </div>
+
+                        <div class="profile-dropdown" id="profileDropdown">
+
+                            <div class="dropdown-header">
+                                <h4 id="studentName"></h4>
+                                <span class="dropdown-role">Student</span>
+                            </div>
+
+                            <div class="dropdown-body">
+                                <div class="info-item">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <span id="studentMobile"></span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-envelope"></i>
+                                    <span id="studentEmail"></span>
+                                </div>
+                            </div>
+
+                            <hr class="dropdown-divider">
+
+                            <ul class="dropdown-menu-links">
+                                <li>
+                                    <a href="student_change_password.html">
+                                        <i class="fa-solid fa-lock"></i>
+                                        <span>Change Password</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="../../Home.html" class="logout-link">
+                                        <i class="fa-solid fa-right-from-bracket"></i>
+                                        <span>Logout</span>
+                                    </a>
+                                </li>
+                            </ul>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </nav>
+
+            <main class="main-content">
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div>
+                        <h2>Welcome Back, <span id="welcomeStudentName"></span>!</h2>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">
+                            Track and manage your campus requests effortlessly.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+
+                    <div class="card card-total">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-file-circle-exclamation"></i>
+                        </div>
+
+                        <div class="card-content">
+                            <span class="card-title">Total Complaints</span>
+                            <span class="card-value" id="studentTotalComplaints"></span>
+                        </div>
+                    </div>
+
+                    <div class="card card-pending">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-hourglass-half"></i>
+                        </div>
+
+                        <div class="card-content">
+                            <span class="card-title">Pending</span>
+                            <span class="card-value" id="studentPendingComplaints"></span>
+                        </div>
+                    </div>
+
+                    <div class="card card-progress">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-spinner"></i>
+                        </div>
+
+                        <div class="card-content">
+                            <span class="card-title">In Progress</span>
+                            <span class="card-value" id="studentProgressComplaints"></span>
+                        </div>
+                    </div>
+
+                    <div class="card card-resolved">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+
+                        <div class="card-content">
+                            <span class="card-title">Resolved</span>
+                            <span class="card-value" id="studentResolvedComplaints"></span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="table-container">
+
+                    <div class="table-header">
+                        <h2>Recent Complaints</h2>
+                    </div>
+
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Complaint ID</th>
+                                <th>Student ID</th>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Description</th>
+                                <th>Priority</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="recentComplaintsBody">
+
+                        </tbody>
+
+                    </table>
+                    
+                </div>
+
+            </main>
+
+        </div>
+
+        <script src="/gms-api.js"></script>
+        <script>
+
+            document.addEventListener("DOMContentLoaded", function () {
+
+                // ===============================
+                // Profile Dropdown Toggle
+                // ===============================
+
+                const profile = document.getElementById("profileTrigger");
+                const dropdown = document.getElementById("profileDropdown");
+
+                if (profile && dropdown) {
+
+                    profile.addEventListener("click", function (e) {
+                        e.stopPropagation();
+                        dropdown.classList.toggle("show");
+                        profile.classList.toggle("active");
+                    });
+
+                    document.addEventListener("click", function (e) {
+                        if (!profile.contains(e.target) && !dropdown.contains(e.target)) {
+                            dropdown.classList.remove("show");
+                            profile.classList.remove("active");
+                        }
+                    });
+
+                }
+                
+
+                // ===============================
+                // Fetch Student Profile
+                // ===============================
+
+                fetch("/api/student/profile")
+                .then(res => res.json())
+                .then(data => {
+
+                    document.getElementById("studentName").textContent = data.studentName;
+                    document.getElementById("welcomeStudentName").textContent = data.studentName.split(" ")[0];
+                    document.getElementById("studentMobile").textContent = data.mobile;
+                    document.getElementById("studentEmail").innerHTML = data.email.replace("@","@<wbr>");
+
+                });
+
+
+                // =====================================
+                // Wrap Description
+                // =====================================
+
+                function wrapText(text, limit) {
+
+                    let words = text.split(" ");
+                    let line = "";
+                    let result = "";
+
+                    words.forEach(function(word){
+
+                        if((line + word).length > limit){
+
+                            result += line + "<br>";
+                            line = word + " ";
+
+                        }else{
+
+                            line += word + " ";
+
+                        }
+
+                    });
+
+                    return result + line;
+
+                }
+
+
+                // ===============================
+                // Fetch Dashboard Data
+                // ===============================
+
+                function loadDashboard() {
+                    fetch("/api/student/dashboard")
+    
+                    .then(response => {
+    
+                        if (!response.ok) {
+                            throw new Error("Unable to fetch dashboard data.");
+                        }
+    
+                        return response.json();
+    
+                    })
+    
+                    .then(data => {
+    
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+    
+                        // Dashboard Cards
+    
+                        document.getElementById("studentTotalComplaints").textContent =
+                            data.totalComplaints || 0;
+    
+                        document.getElementById("studentPendingComplaints").textContent =
+                            data.pendingComplaints || 0;
+    
+                        document.getElementById("studentProgressComplaints").textContent =
+                            data.inProgressComplaints || 0;
+    
+                        document.getElementById("studentResolvedComplaints").textContent =
+                            data.resolvedComplaints || 0;
+    
+    
+                        // Recent Complaints
+    
+                        const tbody = document.getElementById("recentComplaintsBody");
+    
+                        tbody.innerHTML = "";
+    
+                        if (data.recentComplaints && data.recentComplaints.length > 0) {
+    
+                            data.recentComplaints.forEach(function (complaint) {
+    
+                                let badgeClass = "";
+    
+                                switch ((complaint.status || "").toLowerCase()) {
+    
+                                    case "pending":
+                                        badgeClass = "badge-pending";
+                                        break;
+    
+                                    case "assigned":
+                                        badgeClass = "badge-assigned";
+                                        break;
+    
+                                    case "in progress":
+                                        badgeClass = "badge-in-progress";
+                                        break;
+    
+                                    case "resolved":
+                                        badgeClass = "badge-resolved";
+                                        break;
+    
+                                    default:
+                                        badgeClass = "";
+                                }
+    
+                                tbody.innerHTML += `
+                                    <tr>
+                                        <td>${complaint.complaintId}</td>
+                                        <td>${complaint.studentId}</td>
+                                        <td>${complaint.studentName}</td>
+                                        <td>${complaint.category}</td>
+                                        <td>${wrapText(complaint.description || "", 50)}</td>
+                                        <td>${complaint.priority}</td>
+                                        <td>${complaint.date}</td>
+                                        <td>
+                                            <span class="badge ${badgeClass}">
+                                                ${complaint.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                `;
+    
+                            });
+    
+                        } else {
+    
+                            tbody.innerHTML = `
+                                <tr>
+                                    <td colspan="8" style="text-align:center;">
+                                        No complaints found.
+                                    </td>
+                                </tr>
+                            `;
+    
+                        }
+    
+                    })
+    
+                    .catch(error => {
+    
+                        console.error(error);
+    
+                        document.getElementById("studentTotalComplaints").textContent = "0";
+                        document.getElementById("studentPendingComplaints").textContent = "0";
+                        document.getElementById("studentProgressComplaints").textContent = "0";
+                        document.getElementById("studentResolvedComplaints").textContent = "0";
+    
+                    });
+                }
+
+                loadDashboard();
+                setInterval(loadDashboard, 15000);
+
+                // =====================================
+                // Success / Error Popup
+                // =====================================
+
+                const params=new URLSearchParams(window.location.search);
+
+                if(params.has("success")){
+
+                    alert(params.get("success"));
+
+                }
+
+                if(params.has("error")){
+
+                    alert(params.get("error"));
+
+                }
+
+                window.history.replaceState({}, document.title, window.location.pathname);
+
+            });
+
+        </script>
+
+    </body>
+    
+</html>

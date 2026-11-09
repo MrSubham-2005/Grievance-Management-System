@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>View Complaints - GMS</title>
+
+        <link rel="stylesheet" href="../../CSS/style.css">
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </head>
+
+    <body>
+
+        <div class="admin-container">
+
+            <aside class="sidebar">
+                <div class="sidebar-brand">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>GMS Admin</span>
+                </div>
+
+                <ul class="sidebar-menu">
+                    <li class="sidebar-item">
+                        <a href="admin_dashboard.html">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item active">
+                        <a href="view_complaints.html">
+                            <i class="fa-solid fa-list-check"></i>
+                            <span>View Complaints</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="assign_complaint.html">
+                            <i class="fa-solid fa-user-check"></i>
+                            <span>Assign Complaint</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="students.html">
+                            <i class="fa-solid fa-graduation-cap"></i>
+                            <span>Students</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="staff.html">
+                            <i class="fa-solid fa-user-tie"></i>
+                            <span>Staff</span>
+                        </a>
+                    </li>
+                </ul>
+            </aside>
+
+            <nav class="navbar">
+
+                <div class="navbar-title">
+                    <h2>Admin Panel</h2>
+                </div>
+
+                <div class="navbar-right">
+
+                    <div class="navbar-search">
+                        <input type="text" id="adminSearchInput" placeholder="Search complaints, students...">
+                    </div>
+
+                    <div class="navbar-profile-container">
+
+                        <div class="navbar-profile" id="profileTrigger">
+                            <i class="fa-solid fa-circle-user profile-icon"></i>
+                            <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                        </div>
+
+                        <div class="profile-dropdown" id="profileDropdown">
+
+                            <div class="dropdown-header">
+                                <h4 id="adminName"></h4>
+                                <span class="dropdown-role">Super Admin</span>
+                            </div>
+
+                            <div class="dropdown-body">
+                                <div class="info-item">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <span id="adminMobile"></span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-envelope"></i>
+                                    <span id="adminEmail"></span>
+                                </div>
+                            </div>
+
+                            <hr class="dropdown-divider">
+
+                            <ul class="dropdown-menu-links">
+
+                                <li>
+                                    <a href="admin_change_password.html">
+                                        <i class="fa-solid fa-lock"></i>
+                                        <span>Change Password</span>
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a href="../../Home.html" class="logout-link">
+                                        <i class="fa-solid fa-right-from-bracket"></i>
+                                        <span>Logout</span>
+                                    </a>
+                                </li>
+
+                            </ul>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </nav>
+
+            <main class="main-content">
+
+                <!-- HEADER -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div>
+                        <h2>All Complaints</h2>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">
+                            View and manage all student complaints.
+                        </p>
+                    </div>
+
+                    <!-- LOAD BUTTON -->
+                    <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+                        <button type="button" id="loadDataBtn" class="btn btn-assign">
+                            <i class="fa-solid fa-rotate"></i> Load Data
+                        </button>
+                        <a href="/api/admin/complaints.csv" class="btn btn-assign" download>
+                            <i class="fa-solid fa-file-csv"></i> Export CSV
+                        </a>
+                    </div>
+                </div>
+
+                <!-- TABLE -->
+                <div class="table-container">
+
+                    <table id="complaintTable" class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Complaint ID</th>
+                                <th>Student</th>
+                                <th>Category</th>
+                                <th>Description</th>
+                                <th>Supported By</th>
+                                <th>Staff</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="allComplaints">
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <div class="pagination">
+
+                    <button id="prevBtn" class="btn btn-prev">
+                        << Prev
+                    </button>
+
+                    <span id="pageInfo"></span>
+
+                    <div id="timelinePanel" style="display:none;margin-top:20px;">
+                        <h3 id="timelineTitle"></h3>
+                        <p id="timelineStatus" style="display:none;"></p>
+                        <ol class="timeline" id="timelineList"></ol>
+                    </div>
+
+                    <button id="nextBtn" class="btn btn-next">
+                        Next >>
+                    </button>
+
+                </div>
+
+            </main>
+
+        </div>        <script>
+            // Opens the case timeline for one complaint. Text is set with textContent, never as HTML.
+            async function openTimeline(complaintId){
+                const panel=document.getElementById("timelinePanel");
+                const list=document.getElementById("timelineList");
+                const status=document.getElementById("timelineStatus");
+                document.getElementById("timelineTitle").textContent="Case timeline: "+complaintId;
+                list.innerHTML="";
+                status.style.display="none";
+                panel.style.display="block";
+                try{
+                    const res=await fetch("/api/admin/complaints/"+encodeURIComponent(complaintId)+"/timeline",{credentials:"same-origin"});
+                    const data=await res.json();
+                    if(!res.ok) throw new Error(data.error||"The timeline could not be loaded.");
+                    if(!data.events.length){
+                        status.textContent="No activity has been recorded for this complaint yet.";
+                        status.style.display="block";
+                        return;
+                    }
+                    data.events.forEach(function(ev){
+                        const li=document.createElement("li");
+                        const text=document.createElement("span");
+                        text.textContent=ev.message;
+                        const meta=document.createElement("span");
+                        meta.className="timeline-meta";
+                        meta.textContent=new Date(ev.at).toLocaleString("en-IN");
+                        li.appendChild(text);
+                        li.appendChild(meta);
+                        list.appendChild(li);
+                    });
+                }catch(err){
+                    status.textContent=err.message;
+                    status.style.color="#c62828";
+                    status.style.display="block";
+                }
+            }
+
+            document.getElementById("allComplaints").addEventListener("click",function(e){
+                const btn=e.target.closest(".timeline-open");
+                if(btn) openTimeline(btn.dataset.id);
+            });
+
+            document.addEventListener("DOMContentLoaded",()=>{
+
+                // =====================================
+                // Pagination Variables
+                // =====================================
+
+                let allComplaints = [];
+                let originalComplaints = [];
+                let currentPage = 1;
+                const rowsPerPage = 6;
+
+                // ============================
+                // Profile Dropdown
+                // ============================
+
+                const profile=document.getElementById("profileTrigger");
+                const dropdown=document.getElementById("profileDropdown");
+
+                profile.onclick=function(){
+
+                    profile.classList.toggle("active");
+                    dropdown.classList.toggle("show");
+
+                };
+
+                document.onclick=function(e){
+
+                    if(!profile.contains(e.target) &&
+                    !dropdown.contains(e.target)){
+
+                        profile.classList.remove("active");
+                        dropdown.classList.remove("show");
+
+                    }
+
+                };
+
+                // ============================
+                // Admin Profile
+                // ============================
+
+                fetch("/api/admin/profile")
+                .then(res => res.json())
+                .then(data => {
+
+                    document.getElementById("adminName").textContent = data.adminName;
+                    document.getElementById("adminMobile").textContent = data.mobile;
+                    document.getElementById("adminEmail").innerHTML =
+                        data.email.replace("@","@<wbr>");
+
+                });
+
+                // =====================================
+                // Render Table
+                // =====================================
+
+                function wrapText(text, limit) {
+
+                    let words = text.split(" ");
+                    let line = "";
+                    let result = "";
+
+                    words.forEach(function(word){
+
+                        if((line + word).length > limit){
+
+                            result += line + "<br>";
+                            line = word + " ";
+
+                        }else{
+
+                            line += word + " ";
+
+                        }
+
+                    });
+
+                    return result + line;
+
+                }
+
+                function renderTable(){
+
+                    const tbody=document.getElementById("allComplaints");
+
+                    tbody.innerHTML="";
+
+                    const start=(currentPage-1)*rowsPerPage;
+                    const end=start+rowsPerPage;
+
+                    const pageData=allComplaints.slice(start,end);
+
+                    if(pageData.length===0){
+
+                        tbody.innerHTML=`
+
+                            <tr>
+
+                                <td colspan="8" style="text-align:center;">
+
+                                    No Complaints Found
+
+                                </td>
+
+                            </tr>
+
+                        `;
+
+                        return;
+
+                    }
+
+                    pageData.forEach(function(c){
+
+                        let badge="";
+                        let description = wrapText(c.description || "", 50);
+                        if (c.aiAnalysis && Array.isArray(c.aiAnalysis.issues)) {
+                            const esc = (t) => String(t || "").replace(/[&<>"']/g, (ch) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+                            const lines = [c.aiAnalysis.verdict || ""].concat(
+                                c.aiAnalysis.issues.map((i, n) => (n + 1) + ". " + (i.category || "") + " (" + (i.priority || "") + "): " + (i.text || ""))
+                            ).join("\n");
+                            description += ` <i class="fa-solid fa-robot" title="${esc(lines)}"></i>`;
+                        }
+
+                        switch((c.status || "").toLowerCase()){
+
+                            case "pending":
+                                badge="badge-pending";
+                                break;
+
+                            case "assigned":
+                                badge="badge-assigned";
+                                break;
+
+                            case "in progress":
+                                badge="badge-in-progress";
+                                break;
+
+                            case "resolved":
+                                badge="badge-resolved";
+                                break;
+
+                            default:
+                                badge="";
+                        }
+
+                        tbody.innerHTML+=`
+
+                        <tr>
+
+                            <td><button type="button" class="timeline-open" data-id="${c.complaintId}" style="background:none;border:0;padding:0;color:#2563eb;font:inherit;cursor:pointer;text-decoration:underline;">${c.complaintId}</button></td>
+
+                            <td>
+
+                                ${c.studentName}
+
+                                <i class="fa-solid fa-circle-info added-by-icon"
+                                title="Raised On : ${c.complaintDate}">
+                                </i>
+
+                            </td>
+
+                            <td>${c.category}</td>
+
+                            <td>${description}</td>
+
+                            <td>${c.supportedBy}</td>
+
+                            <td>
+
+                                ${c.staffName==="Not Assigned"
+
+                                ? "Not Assigned"
+
+                                :`
+
+                                    ${c.staffName}
+
+                                    <i class="fa-solid fa-circle-info added-by-icon"
+                                    title="Assigned By : ${c.assignedBy}\nAssigned On : ${c.assignedAt}">
+                                    </i>
+
+                                `}
+
+                            </td>
+
+                            <td>
+
+                                <span class="badge ${badge}">
+
+                                    ${c.status}
+
+                                </span>
+                                ${c.overdue ? '<span class="badge badge-overdue" style="margin-left:4px;">Overdue</span>' : ""}
+
+                            </td>
+
+                            <td>
+
+                                <div class="btn-group">
+
+                                    <button
+                                        type="button"
+                                        class="btn btn-delete delete-btn"
+                                        data-id="${c.complaintId}">
+
+                                        <i class="fa-solid fa-trash"></i>
+                                        Delete
+
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        class="btn btn-assign undo-btn"
+                                        data-id="${c.complaintId}"
+                                        style="display:none;">
+
+                                        <i class="fa-solid fa-rotate-left"></i>
+                                        Undo
+
+                                    </button>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                        `;
+
+                    });
+
+                    let totalPages=Math.ceil(allComplaints.length/rowsPerPage);
+
+                    if(totalPages===0){
+                        totalPages=1;
+                    }
+
+                    document.getElementById("pageInfo").innerHTML=
+                        "Page "+currentPage+" of "+totalPages;
+
+                    document.getElementById("prevBtn").disabled=
+                        currentPage===1;
+
+                    document.getElementById("nextBtn").disabled=
+                        currentPage===totalPages;
+
+                }
+
+                // =====================================
+                // Load Complaints
+                // =====================================
+
+                function loadComplaints(){
+
+                    fetch("/api/admin/complaints")
+
+                    .then(response=>{
+
+                        if(!response.ok){
+                            throw new Error("Unable to fetch complaints.");
+                        }
+
+                        return response.json();
+
+                    })
+
+                    .then(data=>{
+
+                        if(data.error){
+                            throw new Error(data.error);
+                        }
+
+                        originalComplaints=data.complaints || [];
+
+                        allComplaints=[...originalComplaints];
+
+                        currentPage=1;
+
+                        renderTable();
+
+                    })
+
+                    .catch(error=>{
+
+                        console.error(error);
+
+                        document.getElementById("allComplaints").innerHTML=`
+
+                            <tr>
+
+                                <td colspan="8" style="text-align:center;color:red;">
+
+                                    Failed to load complaints.
+
+                                </td>
+
+                            </tr>
+
+                        `;
+
+                    });
+
+                };
+
+                // =====================================
+                // Load Data Button
+                // =====================================
+
+                const loadBtn = document.getElementById("loadDataBtn");
+
+                if(loadBtn){
+
+                    loadBtn.addEventListener("click",function(){
+
+                        loadBtn.disabled = true;
+
+                        loadBtn.innerHTML =
+                            '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
+
+                        loadComplaints();
+
+                        setTimeout(function(){
+
+                            loadBtn.disabled = false;
+
+                            loadBtn.innerHTML =
+                                '<i class="fa-solid fa-rotate"></i> Load Data';
+
+                        },500);
+
+                    });
+
+                }
+
+                // =====================================
+                // Delete Complaint with 10s Undo
+                // =====================================
+
+                const deleteTimers = {};
+
+                document.addEventListener("click",function(e){
+
+                    // ==========================
+                    // Delete
+                    // ==========================
+
+                    if(e.target.closest(".delete-btn")){
+
+                        const deleteBtn = e.target.closest(".delete-btn");
+                        const group = deleteBtn.parentElement;
+
+                        const undoBtn = group.querySelector(".undo-btn");
+
+                        const complaintId = deleteBtn.dataset.id;
+
+                        deleteBtn.style.display = "none";
+                        undoBtn.style.display = "inline-flex";
+
+                        deleteBtn.disabled = true;
+
+                        if(deleteTimers[complaintId]){
+                            clearInterval(deleteTimers[complaintId]);
+                        }
+
+                        let seconds = 10;
+
+                        undoBtn.innerHTML =
+                            `<i class="fa-solid fa-rotate-left"></i> Undo (${seconds})`;
+
+                        deleteTimers[complaintId] = setInterval(function(){
+
+                            seconds--;
+
+                            undoBtn.innerHTML =
+                                `<i class="fa-solid fa-rotate-left"></i> Undo (${seconds})`;
+
+                            if(seconds<=0){
+
+                                clearInterval(deleteTimers[complaintId]);
+
+                                delete deleteTimers[complaintId];fetch("/api/admin/complaints/" + encodeURIComponent(complaintId) + "/delete", { method: "POST" })
+
+                                .then(response=>response.json())
+
+                                .then(data=>{
+
+                                    alert(data.message);
+
+                                    delete deleteTimers[complaintId];
+
+                                    loadComplaints();
+
+                                })
+
+                                .catch(()=>{
+
+                                    alert("Unable to delete complaint.");
+
+                                    loadComplaints();
+
+                                });
+
+                            }
+
+                        },1000);
+
+                    }
+
+                    // ==========================
+                    // Undo
+                    // ==========================
+
+                    if(e.target.closest(".undo-btn")){
+
+                        const undoBtn = e.target.closest(".undo-btn");
+                        const group = undoBtn.parentElement;
+
+                        const deleteBtn = group.querySelector(".delete-btn");
+
+                        const complaintId = undoBtn.dataset.id;
+
+                        clearInterval(deleteTimers[complaintId]);
+
+                        delete deleteTimers[complaintId];
+
+                        undoBtn.style.display = "none";
+
+                        deleteBtn.style.display = "inline-flex";
+
+                        deleteBtn.disabled = false;
+
+                    }
+
+                });
+
+                // =====================================
+                // Pagination
+                // =====================================
+
+                document.getElementById("nextBtn").addEventListener("click",function(){
+
+                    const totalPages=Math.ceil(allComplaints.length/rowsPerPage);
+
+                    if(currentPage<totalPages){
+
+                        currentPage++;
+
+                        renderTable();
+
+                    }
+
+                });
+
+                document.getElementById("prevBtn").addEventListener("click",function(){
+
+                    if(currentPage>1){
+
+                        currentPage--;
+
+                        renderTable();
+
+                    }
+
+                });
+
+                // =====================================
+                // Search Complaints
+                // =====================================
+
+                document.getElementById("adminSearchInput")
+                .addEventListener("keyup",function(){
+
+                    const keyword=this.value.trim().toLowerCase();
+
+                    if(keyword===""){
+
+                        allComplaints=[...originalComplaints];
+
+                    }else{
+
+                        allComplaints=originalComplaints.filter(function(c){
+
+                            return(
+
+                                c.complaintId.toLowerCase().includes(keyword) ||
+
+                                c.studentName.toLowerCase().includes(keyword) ||
+
+                                c.category.toLowerCase().includes(keyword) ||
+
+                                c.description.toLowerCase().includes(keyword) ||
+
+                                c.supportedBy.toLowerCase().includes(keyword) ||
+
+                                c.staffName.toLowerCase().includes(keyword) ||
+
+                                c.status.toLowerCase().includes(keyword)
+
+                            );
+
+                        });
+
+                    }
+
+                    currentPage=1;
+
+                    renderTable();
+
+                });
+
+                // =====================================
+                // Initial Load
+                // =====================================
+
+                loadComplaints();
+
+                // =====================================
+                // Success / Error Popup
+                // =====================================
+
+                const params=new URLSearchParams(window.location.search);
+
+                if(params.has("success")){
+
+                    alert(params.get("success"));
+
+                }
+
+                if(params.has("error")){
+
+                    alert(params.get("error"));
+
+                }
+
+                window.history.replaceState({},document.title,window.location.pathname);
+
+            });
+
+        </script>
+
+    <script src="/gms-api.js"></script>
+    </body>
+
+</html>

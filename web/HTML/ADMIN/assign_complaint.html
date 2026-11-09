@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Assign Complaint - GMS</title>
+
+        <!-- CSS -->
+        <link rel="stylesheet" href="../../CSS/style.css">
+
+        <!-- Icons -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </head>
+
+    <body class="hide-search-page">
+
+        <div class="admin-container">
+
+            <aside class="sidebar">
+                <div class="sidebar-brand">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>GMS Admin</span>
+                </div>
+
+                <ul class="sidebar-menu">
+                    <li class="sidebar-item">
+                        <a href="admin_dashboard.html">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="view_complaints.html">
+                            <i class="fa-solid fa-list-check"></i>
+                            <span>View Complaints</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item active">
+                        <a href="assign_complaint.html">
+                            <i class="fa-solid fa-user-check"></i>
+                            <span>Assign Complaint</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="students.html">
+                            <i class="fa-solid fa-graduation-cap"></i>
+                            <span>Students</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="staff.html">
+                            <i class="fa-solid fa-user-tie"></i>
+                            <span>Staff</span>
+                        </a>
+                    </li>
+                </ul>
+            </aside>
+
+            <nav class="navbar">
+
+                <div class="navbar-title">
+                    <h2>Admin Panel</h2>
+                </div>
+
+                <div class="navbar-right">
+
+                    <div class="navbar-search">
+                        <input type="text" id="adminSearchInput" placeholder="Search complaints, students...">
+                    </div>
+
+                    <div class="navbar-profile-container">
+
+                        <div class="navbar-profile" id="profileTrigger">
+                            <i class="fa-solid fa-circle-user profile-icon"></i>
+                            <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                        </div>
+
+                        <div class="profile-dropdown" id="profileDropdown">
+
+                            <div class="dropdown-header">
+                                <h4 id="adminName"></h4>
+                                <span class="dropdown-role">Super Admin</span>
+                            </div>
+
+                            <div class="dropdown-body">
+                                <div class="info-item">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <span id="adminMobile"></span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-envelope"></i>
+                                    <span id="adminEmail"></span>
+                                </div>
+                            </div>
+
+                            <hr class="dropdown-divider">
+
+                            <ul class="dropdown-menu-links">
+
+                                <li>
+                                    <a href="admin_change_password.html">
+                                        <i class="fa-solid fa-lock"></i>
+                                        <span>Change Password</span>
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a href="../../Home.html" class="logout-link">
+                                        <i class="fa-solid fa-right-from-bracket"></i>
+                                        <span>Logout</span>
+                                    </a>
+                                </li>
+
+                            </ul>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </nav>
+
+            <main class="main-content">
+
+                <div style="margin-bottom: 1.5rem;">
+                    <h2>Assign Complaint to Staff</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">
+                        Select a complaint and assign it to a staff member.
+                    </p>
+                </div>
+
+                <div class="form-container">
+
+                    <form id="assignForm" action="/api/admin/complaints/assign" method="POST" onsubmit="event.preventDefault(); GMS.post('/api/admin/complaints/assign', GMS.formData(this)).then(function (d) { alert(d.message); window.location.reload(); }).catch(function (err) { alert(err.message); }); return false;">
+
+                        <div class="form-group">
+                            <label class="form-label">Select Complaint</label>
+                            <select name="complaint_id" id="complaint_id" class="form-control" required>
+                                <option value="" disabled selected>-- Select Complaint --</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Select Staff Member</label>
+                            <select name="staff_id" id="staff_id" class="form-control" required>
+                                <option value="" disabled selected>-- Select Staff --</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+
+                            <div class="btn-group">
+                                <a href="admin_dashboard.html" class="btn btn-cancel" style="text-decoration: none;">
+                                    <i class="fa-solid fa-xmark"></i> Cancel
+                                </a>
+
+                                <button type="submit" class="btn btn-assign">
+                                    <i class="fa-solid fa-user-check"></i> Assign Complaint
+                                </button>
+                            </div>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </main>
+
+        </div>
+
+        <script>
+
+            document.addEventListener("DOMContentLoaded", function () {
+
+                // ===========================
+                // Profile Dropdown
+                // ===========================
+
+                const profile = document.querySelector(".navbar-profile");
+                const dropdown = document.getElementById("profileDropdown");
+
+                profile.addEventListener("click", function (e) {
+
+                    e.stopPropagation();
+                    profile.classList.toggle("active");
+                    dropdown.classList.toggle("show");
+
+                });
+
+                document.addEventListener("click", function (e) {
+
+                    if (!profile.contains(e.target) &&
+                        !dropdown.contains(e.target)) {
+
+                        profile.classList.remove("active");
+                        dropdown.classList.remove("show");
+
+                    }
+
+                });
+
+
+                // ===========================
+                // Admin Profile
+                // ===========================
+
+                fetch("/api/admin/profile")
+                .then(res => res.json())
+                .then(data => {
+
+                    document.getElementById("adminName").textContent = data.adminName;
+                    document.getElementById("adminMobile").textContent = data.mobile;
+                    document.getElementById("adminEmail").innerHTML = data.email.replace("@","@<wbr>");
+
+                });
+
+
+                // ===========================
+                // Load Pending Complaints
+                // ===========================
+
+                fetch("/api/admin/complaints-to-assign")
+
+                .then(res => res.json())
+
+                .then(data => {
+
+                    const complaint = document.getElementById("complaint_id");
+                    const staff = document.getElementById("staff_id");
+
+                    complaint.innerHTML =
+                        '<option value="" disabled selected>-- Select Complaint --</option>';
+
+                    staff.innerHTML =
+                        '<option value="" disabled selected>-- Select Staff --</option>';
+
+                    data.complaints.forEach(function (c) {
+
+                        complaint.innerHTML += `
+                            <option
+                                value="${c.complaintId}"
+                                data-category="${c.category}">
+                                ${c.complaintId} - ${c.category}
+                            </option>
+                        `;
+
+                    });
+
+                });
+
+
+                // ===========================
+                // Load Staff According to Category
+                // ===========================
+
+                document.getElementById("complaint_id").addEventListener("change", function () {
+
+                    const category =
+                        this.options[this.selectedIndex].dataset.category;
+
+                    fetch("/api/admin/staff-for-category?category=" +
+                        encodeURIComponent(category))
+
+                    .then(res => res.json())
+
+                    .then(data => {
+
+                        const staff = document.getElementById("staff_id");
+
+                        staff.innerHTML =
+                            '<option value="" disabled selected>-- Select Staff --</option>';
+
+                        if (data.staff.length === 0) {
+
+                            staff.innerHTML += `
+                                <option disabled>
+                                    No Staff Available
+                                </option>
+                            `;
+
+                            return;
+                        }
+
+                        data.staff.forEach(function (s) {
+
+                            staff.innerHTML += `
+                                <option value="${s.staffId}">
+                                    ${s.staffName} (${s.pending}/${s.total})
+                                </option>
+                            `;
+
+                        });
+
+                    })
+
+                    .catch(function () {
+
+                        const staff = document.getElementById("staff_id");
+
+                        staff.innerHTML =
+                            '<option value="" disabled selected>Error Loading Staff</option>';
+
+                    });
+
+                });
+
+                // =====================================
+                // Success / Error Popup
+                // =====================================
+
+                const params = new URLSearchParams(window.location.search);
+
+                if(params.has("success")){
+
+                    alert(params.get("success"));
+                    window.history.replaceState({}, document.title, window.location.pathname);
+
+                }
+
+                if(params.has("error")){
+
+                    alert(params.get("error"));
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    
+                }
+
+            });
+
+        </script>
+
+    <script src="/gms-api.js"></script>
+    </body>
+
+</html>

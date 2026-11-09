@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Raise Complaint - GMS</title>
+
+        <link rel="stylesheet" href="../../CSS/style.css">
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </head>
+
+    <body class="hide-search-page">
+
+        <div class="admin-container">
+
+            <aside class="sidebar">
+                <div class="sidebar-brand">
+                    <i class="fa-solid fa-user-graduate"></i>
+                    <span>GMS Students</span>
+                </div>
+
+                <ul class="sidebar-menu">
+                    <li class="sidebar-item">
+                        <a href="student_dashboard.html">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item active">
+                        <a href="raise_complaint.html">
+                            <i class="fa-solid fa-file-circle-plus"></i>
+                            <span>Raise Complaint</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="view_complaint_status.html">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span>View Complaint Status</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="feedback.html">
+                            <i class="fa-solid fa-comment"></i>
+                            <span>Feedback</span>
+                        </a>
+                    </li>
+
+                </ul>
+            </aside>    
+
+            <nav class="navbar">
+
+                <div class="navbar-title">
+                    <h2>Student Panel</h2>
+                </div>
+
+                <div class="navbar-right">
+
+                    <div class="navbar-search">
+                        <input type="text" id="studentSearchInput" placeholder="Search complaints, students...">
+                    </div>
+
+                    <div class="navbar-profile-container">
+
+                        <div class="navbar-profile" id="profileTrigger">
+                            <i class="fa-solid fa-circle-user profile-icon"></i>
+                            <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                        </div>
+
+                        <div class="profile-dropdown" id="profileDropdown">
+
+                            <div class="dropdown-header">
+                                <h4 id="studentName"></h4>
+                                <span class="dropdown-role">Student</span>
+                            </div>
+
+                            <div class="dropdown-body">
+                                <div class="info-item">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <span id="studentMobile"></span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-envelope"></i>
+                                    <span id="studentEmail"></span>
+                                </div>
+                            </div>
+
+                            <hr class="dropdown-divider">
+
+                            <ul class="dropdown-menu-links">
+                                <li>
+                                    <a href="student_change_password.html">
+                                        <i class="fa-solid fa-lock"></i>
+                                        <span>Change Password</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="../../Home.html" class="logout-link">
+                                        <i class="fa-solid fa-right-from-bracket"></i>
+                                        <span>Logout</span>
+                                    </a>
+                                </li>
+                            </ul>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </nav>
+
+            <main class="main-content">
+            
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div>
+                        <h2>Raise a New Complaint</h2>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">
+                            Please fill out the form below details accurately. Our team will review and address it promptly.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="form-container">
+
+                    <form id="complaintForm" action="/api/student/complaints" method="POST">
+
+                        <div class="form-group">
+                            <label class="form-label">Complaint Category</label>
+
+                            <select id="category" name="complaint_category" class="form-control" required>
+
+                                <option value="" disabled selected>-- Select Category --</option>
+                                <option>Academic Section</option>
+                                <option>Accounts</option>
+                                <option>Administration</option>
+                                <option>Admission Cell</option>
+                                <option>Cafeteria</option>
+                                <option>Civil Lab</option>
+                                <option>Civil Maintenance</option>
+                                <option>Computer Lab</option>
+                                <option>Electrical Lab</option>
+                                <option>Electrical Maintenance</option>
+                                <option>Electronics Lab</option>
+                                <option>Examination Cell</option>
+                                <option>Hostel</option>
+                                <option>Housekeeping</option>
+                                <option>IT &amp; Network Support</option>
+                                <option>Laboratory</option>
+                                <option>Library</option>
+                                <option>Maintenance</option>
+                                <option>Mechanical Lab</option>
+                                <option>Plumbing</option>
+                                <option>Scholarship Cell</option>
+                                <option>Security</option>
+                                <option>Sports Department</option>
+                                <option>Student Welfare</option>
+                                <option>Training &amp; Placement</option>
+                                <option>Transport</option>
+
+                            </select>
+
+                            <div id="aiCategorySuggestion"></div>
+                            
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <textarea id="description" name="description" class="form-control" maxlength="150" placeholder="E.g., Wi-Fi not working on 2nd floor..." required></textarea>
+                            <span class="char-counter" id="descriptionCharCounter"> 0 / 150 characters </span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Priority</label>
+                            <input type="text" id="priority" class="form-control" placeholder="AI will detect priority" readonly>
+                            <input type="hidden" id="priorityValue" name="priority">
+                            <div id="aiPrioritySuggestion"></div>
+                            <div id="aiStatus" role="status" style="display:none;font-size:13px;color:#1e4fa3;margin-top:6px;">AI is analyzing your complaint...</div>
+                        </div>
+
+                        <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+
+                            <div class="btn-group">
+                                <a href="student_dashboard.html" class="btn btn-cancel" style="text-decoration: none;">
+                                    <i class="fa-solid fa-xmark"></i> Cancel
+                                </a>
+
+                                <button type="reset" id="resetBtn" class="btn btn-reset">
+                                    <i class="fa-solid fa-arrow-rotate-left"></i> Reset
+                                </button>
+
+                                <button type="submit" class="btn btn-assign">
+                                    <i class="fa-solid fa-user-check"></i> Submit Complaint
+                                </button>
+                            </div>
+
+                        </div>
+
+                        <input type="hidden" id="joinComplaint" name="joinComplaint" value="false">
+                        <input type="hidden" id="existingComplaintId" name="existingComplaintId">
+                        <input type="hidden" id="aiAnalysis" name="ai_analysis" value="">
+
+                    </form>
+                    
+                    <div id="duplicatePopup" class="duplicate-popup">
+
+                        <div class="duplicate-popup-content">
+
+                            <div class="popup-header">
+                                <i class="fa-solid fa-robot"></i>
+                                <h2>AI Assistant</h2>
+                            </div>
+
+                            <h3 id="popupSimilarity" class="popup-similarity">
+
+                            </h3>
+
+                            <div class="popup-details">
+
+                                <div class="popup-row">
+                                    <span class="popup-label">Complaint ID :</span>
+                                    <span id="popupComplaintId"></span>
+                                </div>
+
+                                <div class="popup-row">
+                                    <span class="popup-label">Category :</span>
+                                    <span id="popupCategory"></span>
+                                </div>
+
+                                <div class="popup-row">
+                                    <span class="popup-label">Description :</span>
+                                    <span id="popupDescription"></span>
+                                </div>
+
+                                <div class="popup-row">
+                                    <span class="popup-label">Reported By :</span>
+                                    <span id="popupReportedBy"></span>
+                                </div>
+
+                                <div class="popup-row">
+                                    <span class="popup-label">Status :</span>
+                                    <span id="popupStatus"></span>
+                                </div>
+
+                            </div>
+
+                            <p class="popup-question">
+                                Do you want to join this complaint?
+                            </p>
+
+                            <div class="btn-group">
+
+                                <button
+                                    type="button"
+                                    id="cancelBtn"
+                                    class="btn btn-cancel">
+
+                                    <i class="fa-solid fa-xmark"></i>
+                                    Cancel
+
+                                </button>
+
+                                <button
+                                    type="button"
+                                    id="joinComplaintBtn"
+                                    class="btn btn-assign">
+
+                                    <i class="fa-solid fa-users"></i>
+                                    Join Complaint
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </main>
+
+        </div>    
+
+        <script src="/gms-api.js"></script>
+        <script>
+
+            document.addEventListener("DOMContentLoaded", function () {
+
+                // ============================================
+                // Global Variables
+                // ============================================
+
+                const complaintForm =
+                        document.getElementById("complaintForm");
+
+                const duplicatePopup =
+                        document.getElementById("duplicatePopup");
+
+                const category =
+                        document.getElementById("category");
+
+                const description =
+                        document.getElementById("description");
+
+                let duplicateComplaintId = "";
+
+
+                // ============================================
+                // Profile Dropdown
+                // ============================================
+
+                const profile =
+                        document.querySelector(".navbar-profile");
+
+                const dropdown =
+                        document.getElementById("profileDropdown");
+
+                profile.addEventListener("click", function (e) {
+
+                    e.stopPropagation();
+
+                    profile.classList.toggle("active");
+
+                    dropdown.classList.toggle("show");
+
+                });
+
+                document.addEventListener("click", function (e) {
+
+                    if (!profile.contains(e.target) &&
+                        !dropdown.contains(e.target)) {
+
+                        profile.classList.remove("active");
+
+                        dropdown.classList.remove("show");
+
+                    }
+
+                });
+
+
+                // ============================================
+                // Student Profile
+                // ============================================
+
+                fetch("/api/student/profile")
+
+                .then(response => response.json())
+
+                .then(data => {
+
+                    document.getElementById("studentName").textContent =
+                            data.studentName;
+
+                    document.getElementById("studentMobile").textContent =
+                            data.mobile;
+
+                    document.getElementById("studentEmail").innerHTML =
+                            data.email.replace("@", "@<wbr>");
+
+                });
+
+
+                // ============================================
+                // AI Category + Priority Suggestion
+                // ============================================
+
+                let aiTimer = null;
+
+                function showAnalyzing(on) {
+                    document.getElementById("aiStatus").style.display = on ? "block" : "none";
+                }
+
+                description.addEventListener("input", function () {
+
+                    clearTimeout(aiTimer);
+
+                    const desc = description.value.trim();
+
+                    if(desc.length < 10){
+
+                        document.getElementById("aiCategorySuggestion").style.display = "none";
+
+                        document.getElementById("aiPrioritySuggestion").style.display = "none";
+
+                        document.getElementById("priority").value = "";
+
+                        document.getElementById("priorityValue").value = "";
+
+                        return;
+
+                    }
+
+                    window.latestAiAnalysis = null;
+                    document.getElementById("aiAnalysis").value = "";
+
+                    aiTimer = setTimeout(function(){
+
+                        // ============================================
+                        // AI Analysis (Spam + Category + Priority)
+                        // ============================================
+
+                        showAnalyzing(true);
+
+                        fetch("/api/student/analyze",{
+
+                            method:"POST",
+
+                            headers:{
+                                "Content-Type":"application/x-www-form-urlencoded"
+                            },
+
+                            body:"description="+encodeURIComponent(desc)
+
+                        })
+
+                        .then(res=>res.json())
+
+                        .then(data=>{
+
+                            if(!data.error){
+                                window.latestAiAnalysis = data;
+                            }
+
+                            // -------------------------
+                            // Spam Complaint
+                            // -------------------------
+
+                            if(data.spam){
+
+                                alert(data.message);
+
+                                complaintForm.reset();
+
+                                // Reset Category
+                                document.getElementById("category").selectedIndex = 0;
+
+                                // Reset Priority
+                                document.getElementById("priority").value = "";
+                                document.getElementById("priorityValue").value = "";
+
+                                // Hide AI Suggestions
+                                document.getElementById("aiCategorySuggestion").style.display = "none";
+                                document.getElementById("aiCategorySuggestion").innerHTML = "";
+
+                                document.getElementById("aiPrioritySuggestion").style.display = "none";
+                                document.getElementById("aiPrioritySuggestion").innerHTML = "";
+
+                                // Reset Character Counter
+                                document.getElementById("descriptionCharCounter").textContent =
+                                    "0 / 150 characters";
+
+                                // Focus back to Description
+                                document.getElementById("description").focus();
+
+                                return;
+                            }
+
+                            // -------------------------
+                            // Category
+                            // -------------------------
+
+                            if(data.category){
+
+                                const categoryBox =
+                                    document.getElementById("aiCategorySuggestion");
+
+                                // User ne pehle kya select kiya tha
+                                const userCategory = category.value;
+
+                                if(userCategory === data.category){
+
+                                    // Same category -> Hide message
+                                    categoryBox.style.display = "none";
+                                    categoryBox.innerHTML = "";
+
+                                }else{
+
+                                    // Different category -> Show message
+                                    categoryBox.style.display = "block";
+
+                                    categoryBox.innerHTML =
+                                        '<i class="fa-solid fa-robot"></i> AI Suggested Category : <b>'
+                                        + data.category +
+                                        '</b>';
+
+                                    // Automatically change dropdown
+                                    category.value = data.category;
+
+                                }
+
+                            }
+
+                            // -------------------------
+                            // Priority
+                            // -------------------------
+
+                            if(data.priority){
+
+                                const priority =
+                                    document.getElementById("priority");
+
+                                document.getElementById("priority").value = data.priority;
+                                document.getElementById("priorityValue").value = data.priority;
+
+                                const priorityBox =
+                                    document.getElementById("aiPrioritySuggestion");
+
+                                priorityBox.style.display = "block";
+
+                                priorityBox.innerHTML =
+                                    '<i class="fa-solid fa-circle-exclamation"></i> AI Suggested Priority : <b>'
+                                    + data.priority +
+                                    '</b>';
+
+                            }
+
+                        })
+
+                        .catch(err=>{
+                            console.error(err);
+                            alert("The AI analysis could not run. Check your connection and try again. If you were signed out, sign in again from the login page.");
+                        })
+                        .finally(function(){ showAnalyzing(false); });
+
+                    },500);
+
+                });
+
+
+                // ============================================
+                // Character Counter
+                // ============================================
+
+                const descriptionCounter =
+                        document.getElementById("descriptionCharCounter");
+
+                description.addEventListener("input", function () {
+
+                    descriptionCounter.textContent =
+                            this.value.length +
+                            " / 150 characters";
+
+                });
+
+
+                // ============================================
+                // Reset Button
+                // ============================================
+
+                document.getElementById("resetBtn")
+                .addEventListener("click", function () {
+
+                    // Hide AI Suggestion
+                    document.getElementById("aiCategorySuggestion").style.display = "none";
+                    document.getElementById("aiCategorySuggestion").innerHTML = "";
+
+                    document.getElementById("aiPrioritySuggestion").style.display = "none";
+                    document.getElementById("aiPrioritySuggestion").innerHTML = "";
+
+                    document.getElementById("priority").value = "";
+                    document.getElementById("priorityValue").value = "";
+
+                    // Reset Category
+                    document.getElementById("category").selectedIndex = 0;
+
+                    // Reset Character Counter
+                    document.getElementById("descriptionCharCounter").textContent =
+                        "0 / 150 characters";
+
+                    // Reset Hidden Fields
+                    document.getElementById("joinComplaint").value = "false";
+                    document.getElementById("existingComplaintId").value = "";
+
+                    // Close Duplicate Popup (if open)
+                    duplicatePopup.classList.remove("show");
+
+                });
+
+
+                // ============================================
+                // Success / Error Messages
+                // ============================================
+
+                const params =
+                        new URLSearchParams(window.location.search);
+
+                if (params.has("success")) {
+
+                    alert(params.get("success"));
+
+                    window.history.replaceState({}, document.title, window.location.pathname);
+
+                }
+
+                if (params.has("error")) {
+
+                    alert(params.get("error"));
+
+                    window.history.replaceState({}, document.title, window.location.pathname);
+
+                }
+
+
+                // ============================================
+                // AI Duplicate Complaint Check
+                // ============================================
+
+                complaintForm.addEventListener("submit", function (e) {
+
+                    e.preventDefault();
+
+                    const categoryValue =
+                            category.value.trim();
+
+                    const descriptionValue =
+                            description.value.trim();                    if(descriptionValue.length < 20){
+
+                        alert("Complaint description must be at least 20 characters.");
+
+                        description.focus();
+
+                        return;
+                    }
+
+                    // AI has not returned a priority yet: wait for it, then submit.
+                    if(document.getElementById("priorityValue").value==""){
+
+                        clearTimeout(aiTimer);
+                        showAnalyzing(true);
+
+                        fetch("/api/student/analyze",{
+                            method:"POST",
+                            headers:{"Content-Type":"application/x-www-form-urlencoded"},
+                            body:"description="+encodeURIComponent(descriptionValue)
+                        })
+                        .then(res=>res.json())
+                        .then(data=>{
+                            if(data.error){ throw new Error(data.error); }
+                            window.latestAiAnalysis = data;
+                            if(data.spam){
+                                alert(data.message);
+                                complaintForm.reset();
+                                return;
+                            }
+                            if(data.priority){
+                                document.getElementById("priority").value = data.priority;
+                                document.getElementById("priorityValue").value = data.priority;
+                            }
+                            complaintForm.requestSubmit();
+                        })
+                        .catch(function(err){
+                            alert(err.message || "The AI analysis could not run. Check your connection and try again.");
+                        })
+                        .finally(function(){ showAnalyzing(false); });
+                        return;
+                    }
+
+
+                    const analysis = window.latestAiAnalysis;
+                    document.getElementById("aiAnalysis").value =
+                        analysis && analysis.description === descriptionValue ? JSON.stringify(analysis) : "";
+
+                    fetch("/api/student/check-duplicate", {
+
+                        method: "POST",
+
+                        headers: {
+
+                            "Content-Type":
+                            "application/x-www-form-urlencoded"
+
+                        },
+
+                        body:
+
+                            "category=" +
+                            encodeURIComponent(categoryValue)
+
+                            +
+
+                            "&description=" +
+
+                            encodeURIComponent(descriptionValue)
+
+                    })
+
+                    .then(response => response.json())
+
+                    .then(data => {
+
+                        if (data.error) {
+
+                            alert(data.error);
+
+                            return;
+
+                        }
+
+                        // ===========================
+                        // No Similar Complaint
+                        // ===========================
+
+                        if (!data.duplicate) {
+
+                            submitComplaint();
+
+                            return;
+
+                        }
+
+                        // ===========================
+                        // Similar Complaint Found
+                        // ===========================
+
+                        duplicateComplaintId =
+                                data.complaintId;
+
+                        document.getElementById("popupSimilarity").textContent =
+                                data.similarity +
+                                "% Similar Complaint Found";
+
+                        document.getElementById("popupComplaintId").textContent =
+                                data.complaintId;
+
+                        document.getElementById("popupCategory").textContent =
+                                data.category;
+
+                        document.getElementById("popupDescription").textContent =
+                                data.description;
+
+                        document.getElementById("popupReportedBy").textContent =
+                                data.reportedBy +
+                                " Students";
+
+                        document.getElementById("popupStatus").textContent =
+                                data.status;
+
+                        duplicatePopup.classList.add("show");
+
+                    })
+
+                    .catch(function (error) {
+
+                        console.error(error);
+
+                        alert("Unable to connect to AI service.");
+
+                    });
+
+                });
+
+                // ============================================
+                // Cancel Button
+                // ============================================
+
+                document.getElementById("cancelBtn")
+                .addEventListener("click", function () {
+
+                    duplicatePopup.classList.remove("show");
+
+                    document.getElementById("joinComplaint").value = "false";
+
+                    document.getElementById("existingComplaintId").value = "";
+
+                });
+
+
+                // ============================================
+                // Close Popup on ESC Key
+                // ============================================
+
+                document.addEventListener("keydown", function (e) {
+
+                    if (e.key === "Escape") {
+
+                        duplicatePopup.classList.remove("show");
+
+                        document.getElementById("joinComplaint").value = "false";
+
+                        document.getElementById("existingComplaintId").value = "";
+
+                    }
+
+                });
+
+
+                // ============================================
+                // Close Popup on Background Click
+                // ============================================
+
+                duplicatePopup.addEventListener("click", function (e) {
+
+                    if (e.target === duplicatePopup) {
+
+                        duplicatePopup.classList.remove("show");
+
+                        document.getElementById("joinComplaint").value = "false";
+
+                        document.getElementById("existingComplaintId").value = "";
+
+                    }
+
+                });
+
+
+                // ============================================
+                // Helper Function
+                // ============================================
+
+                let isSubmitting = false;
+
+                function submitComplaint() {
+
+                    if (isSubmitting) {
+                        return;
+                    }
+
+                    isSubmitting = true;
+
+                    document.querySelector("button[type='submit']").disabled = true;
+
+                    GMS.post("/api/student/complaints", GMS.formData(complaintForm))
+                    .then(function (data) {
+                        alert(data.message || "Complaint submitted.");
+                        GMS.go("/HTML/STUDENTS/view_complaint_status.html");
+                    })
+                    .catch(function (error) {
+                        isSubmitting = false;
+                        document.querySelector("button[type='submit']").disabled = false;
+                        alert(error.message);
+                    });
+
+                }
+
+
+                // ============================================
+                // Update Join Button
+                // ============================================
+
+                document.getElementById("joinComplaintBtn")
+                .addEventListener("click", function () {
+
+                    document.getElementById("joinComplaint").value = "true";
+
+                    document.getElementById("existingComplaintId").value =
+                            duplicateComplaintId;
+
+                    duplicatePopup.classList.remove("show");
+
+                    submitComplaint();
+
+                });
+
+            });
+
+        </script>
+
+    </body>
+
+</html>

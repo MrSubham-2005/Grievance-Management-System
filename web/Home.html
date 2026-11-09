@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Grievance Management System (GMS) | College Portal</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <Style>
+            /* Core Structural Design Configuration Variables */
+            :root {
+                --primary: #2563EB;
+                --primary-hover: #1D4ED8;
+                --secondary: #0F172A;
+                --accent: #14B8A6;
+                --bg-main: #F8FAFC;
+                --bg-card: rgba(255, 255, 255, 0.75);
+                --bg-light: #F1F5F9;
+                --text-main: #1E293B;
+                --text-muted: #64748B;
+                --border-color: rgba(226, 232, 240, 0.8);
+                --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.06);
+                --glass-blur: blur(12px);
+                --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            /* Dark Mode Variables Configuration overrides */
+            [data-theme="dark"] {
+                --bg-main: #0B0F19;
+                --bg-card: rgba(15, 23, 42, 0.7);
+                --bg-light: #1E293B;
+                --text-main: #F8FAFC;
+                --text-muted: #94A3B8;
+                --border-color: rgba(51, 65, 85, 0.5);
+                --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            }
+
+            /* Standard Base Reset Configurations */
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                font-family: 'Poppins', sans-serif;
+            }
+
+            html {
+                scroll-behavior: smooth;
+            }
+
+            body {
+                background-color: var(--bg-main);
+                color: var(--text-main);
+                overflow-x: hidden;
+                transition: background-color 0.3s, color 0.3s;
+            }
+
+            /* Custom UI Scrollbar styling */
+            ::-webkit-scrollbar {
+                width: 10px;
+            }
+            ::-webkit-scrollbar-track {
+                background: var(--bg-main);
+            }
+            ::-webkit-scrollbar-thumb {
+                background: var(--text-muted);
+                border-radius: 5px;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: var(--primary);
+            }
+
+            /* Component Layout Frameworks */
+            .container {
+                width: 100%;
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 0 24px;
+            }
+
+            .section {
+                padding: 80px 0;
+            }
+
+            .bg-light {
+                background-color: var(--bg-light);
+            }
+
+            .section-header {
+                text-align: center;
+                max-width: 600px;
+                margin: 0 auto 50px auto;
+            }
+
+            .section-header h2 {
+                font-size: 2.2rem;
+                color: var(--text-main);
+                margin-bottom: 12px;
+                position: relative;
+            }
+
+            .section-header p {
+                color: var(--text-muted);
+            }
+
+            .grid {
+                display: grid;
+                gap: 24px;
+            }
+            .grid-3 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+            .grid-4 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+
+            /* Interactive Global Button Modifiers */
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-weight: 500;
+                font-size: 0.95rem;
+                cursor: pointer;
+                transition: var(--transition);
+                text-decoration: none;
+                border: none;
+            }
+
+            .btn-primary {
+                background: linear-gradient(135deg, var(--primary), #3B82F6);
+                color: #ffffff;
+                box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+            }
+            .btn-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+            }
+
+            .btn-secondary {
+                background-color: var(--bg-light);
+                color: var(--text-main);
+                border: 1px solid var(--border-color);
+            }
+
+            .btn-outline {
+                background: transparent;
+                color: var(--text-main);
+                border: 2px solid var(--border-color);
+            }
+            .btn-outline:hover {
+                border-color: var(--primary);
+                color: var(--primary);
+            }
+
+            .btn-block { width: 100%; justify-content: center; }
+
+            /* Preloader Screen styles */
+            .preloader {
+                position: fixed;
+                top:0; left:0; width:100%; height:100%;
+                background-color: var(--bg-main);
+                z-index: 9999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: opacity 0.5s ease, visibility 0.5s;
+            }
+            .spinner {
+                width: 50px; height: 50px;
+                border: 5px solid var(--border-color);
+                border-top-color: var(--primary);
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+            @keyframes spin { to { transform: rotate(360deg); } }
+
+            /* Sticky Navigation Top Elements */
+            .navbar {
+                position: sticky;
+                top: 0;
+                z-index: 1000;
+                background: var(--bg-card);
+                backdrop-filter: var(--glass-blur);
+                -webkit-backdrop-filter: var(--glass-blur);
+                border-bottom: 1px solid var(--border-color);
+                box-shadow: var(--glass-shadow);
+                transition: var(--transition);
+            }
+
+            .nav-container {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                max-width: 1300px;
+                margin: 0 auto;
+                padding: 16px 24px;
+            }
+
+            .logo {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 1.3rem;
+                font-weight: 700;
+                color: var(--primary);
+                text-decoration: none;
+            }
+
+            .nav-menu {
+                display: flex;
+                gap: 32px;
+            }
+
+            .nav-link {
+                text-decoration: none;
+                color: var(--text-main);
+                font-weight: 500;
+                font-size: 0.95rem;
+                transition: var(--transition);
+                position: relative;
+                padding: 4px 0;
+            }
+            .nav-link:hover, .nav-link.active {
+                color: var(--primary);
+            }
+            .nav-link::after {
+                content: '';
+                position: absolute;
+                bottom: 0; left: 0; width: 0; height: 2px;
+                background-color: var(--primary);
+                transition: var(--transition);
+            }
+            .nav-link:hover::after, .nav-link.active::after { width: 100%; }
+
+            .nav-actions {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+            }
+
+            .theme-btn {
+                background: none; border: none;
+                color: var(--text-main);
+                font-size: 1.2rem; cursor: pointer;
+                padding: 8px; transition: var(--transition);
+            }
+
+            /* User Account Interface Entry Dropdowns */
+            .dropdown { position: relative; display: inline-block; }
+            .dropdown-content {
+                display: none; position: absolute; right: 0;
+                background-color: var(--bg-card);
+                backdrop-filter: var(--glass-blur);
+                -webkit-backdrop-filter: var(--glass-blur);
+                min-width: 180px; box-shadow: var(--glass-shadow);
+                border: 1px solid var(--border-color);
+                border-radius: 8px; z-index: 1; overflow: hidden;
+            }
+            .dropdown-content a {
+                color: var(--text-main); padding: 12px 16px;
+                text-decoration: none; display: flex; align-items: center; gap: 10px;
+                font-size: 0.9rem; transition: var(--transition);
+            }
+            .dropdown-content a:hover { background-color: var(--bg-light); color: var(--primary); }
+            .dropdown:hover .dropdown-content { display: block; }
+
+            .hamburger { display: none; background: none; border: none; color: var(--text-main); font-size: 1.4rem; cursor: pointer; }
+
+            /* Structural Hero Content Layer layouts */
+            .hero {
+                position: relative;
+                padding: 120px 0 100px 0;
+                overflow: hidden;
+            }
+            .hero-bg-shapes {
+                position: absolute; top:0; left:0; width:100%; height:100%; z-index: -1;
+            }
+            .shape { position: absolute; border-radius: 50%; filter: blur(60px); }
+            .shape-1 { top: 10%; right: 10%; width: 300px; height: 300px; background-color: rgba(37, 99, 235, 0.15); animation: floating 6s ease-in-out infinite; }
+            .shape-2 { bottom: 10%; left: 5%; width: 250px; height: 250px; background-color: rgba(20, 184, 166, 0.15); animation: floating 8s ease-in-out infinite alternate; }
+
+            @keyframes floating {
+                0% { transform: translateY(0px); }
+                100% { transform: translateY(-20px); }
+            }
+
+            .hero-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                align-items: center;
+                gap: 48px;
+            }
+            .hero-text h1 { font-size: 3.5rem; line-height: 1.2; color: var(--secondary); margin-bottom: 8px; }
+            [data-theme="dark"] .hero-text h1 { color: #ffffff; }
+            .hero-text h2 { font-size: 1.8rem; color: var(--primary); margin-bottom: 20px; font-weight: 600; min-height: 40px; }
+            .hero-text p { font-size: 1.1rem; color: var(--text-muted); margin-bottom: 36px; line-height: 1.6; }
+            .hero-ctas { display: flex; gap: 16px; }
+
+            /* Global Fade-In Animations on Scroll */
+            .fade-in {
+                opacity: 0;
+                transform: translateY(30px);
+                transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+            }
+            .fade-in.appear {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            /* Operational Matrix Numerical Metrics */
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 24px;
+            }
+            .stat-card {
+                background: var(--bg-card);
+                border: 1px solid var(--border-color);
+                box-shadow: var(--glass-shadow);
+                backdrop-filter: var(--glass-blur);
+                -webkit-backdrop-filter: var(--glass-blur);
+                border-radius: 16px;
+                padding: 32px 24px;
+                text-align: center;
+                transition: var(--transition);
+            }
+            .stat-card:hover { transform: translateY(-5px); border-color: var(--primary); }
+            .stat-icon { font-size: 2.2rem; color: var(--primary); margin-bottom: 12px; }
+            .counter { font-size: 2.5rem; font-weight: 700; color: var(--text-main); margin-bottom: 4px; }
+
+            /* Structural Cards Design definitions */
+            .benefit-card, .feature-card {
+                background: var(--bg-card);
+                border: 1px solid var(--border-color);
+                box-shadow: var(--glass-shadow);
+                border-radius: 16px; padding: 32px 24px;
+                transition: var(--transition);
+            }
+            .benefit-card:hover, .feature-card:hover { transform: translateY(-8px); box-shadow: 0 12px 40px rgba(0,0,0,0.08); border-color: var(--accent); }
+            .benefit-icon { font-size: 2.5rem; color: var(--accent); margin-bottom: 16px; }
+
+            .f-icon-wrapper {
+                width: 60px; height: 60px; border-radius: 50%;
+                background-color: rgba(37, 99, 235, 0.1);
+                color: var(--primary); display: flex; align-items: center;
+                justify-content: center; font-size: 1.5rem; margin-bottom: 20px;
+                transition: var(--transition);
+            }
+            .feature-card:hover .f-icon-wrapper { background-color: var(--primary); color: #ffffff; }
+            .feature-card h3, .benefit-card h3 { font-size: 1.3rem; margin-bottom: 12px; }
+            .feature-card p, .benefit-card p { color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; }
+
+            /* Horizontal Procedural Workflow Timelines */
+            .timeline {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 32px; position: relative; margin-top: 20px;
+            }
+            .timeline-step { text-align: center; position: relative; }
+            .step-num {
+                width: 50px; height: 50px; border-radius: 50%;
+                background: linear-gradient(135deg, var(--primary), var(--accent));
+                color: #ffffff; display: inline-flex; align-items: center; justify-content: center;
+                font-weight: 700; font-size: 1.2rem; margin-bottom: 16px;
+                box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+            }
+            .timeline-step h3 { font-size: 1.1rem; margin-bottom: 8px; }
+            .timeline-step p { font-size: 0.88rem; color: var(--text-muted); line-height: 1.4; }
+            /* Container & Layout */
+            .portal-updates {
+                padding: 60px 0;
+                background: transparent;
+            }
+
+            .updates-container {
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 0 20px;
+            }
+
+            .updates-header {
+                text-align: center;
+                margin-bottom: 40px;
+            }
+
+            .updates-header h2 {
+                font-size: 28px;
+                color: var(--text-main);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+            }
+
+            .updates-header p {
+                color: var(--text-muted, #64748b);
+                margin-top: 5px;
+                font-size: 15px;
+            }
+
+            /* Grid Design */
+            .updates-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 25px;
+            }
+
+            /* Card Styling with subtle Glassmorphism */
+            .update-card {
+                background: var(--bg-card);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                border:1px solid var(--border-color);
+                padding: 25px;
+                border-radius: 12px;
+                position: relative;
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
+
+            .update-card:hover {
+                transform: translateY(-8px);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+                border-color: var(--accent);
+            }
+
+            /* Badges and Dates */
+            .update-badge {
+                font-size: 11px;
+                font-weight: 600;
+                padding: 4px 10px;
+                border-radius: 20px;
+                background: rgba(100, 116, 139, 0.1);
+                color: var(--text-muted, #64748b);
+                text-transform: uppercase;
+            }
+
+            .badge-new {
+                background: rgba(37, 99, 235, 0.1);
+                color: #2563eb;
+            }
+
+            .badge-info {
+                background: rgba(16, 185, 129, 0.1);
+                color: #10b981;
+            }
+
+            .update-date {
+                display: block;
+                font-size: 12px;
+                color: var(--text-muted, #64748b);
+                margin: 15px 0 8px 0;
+            }
+
+            /* Typography inside card */
+            .update-card h3 {
+                font-size: 18px;
+                color: var(--text-main);
+                margin: 0 0 10px 0;
+                font-weight: 600;
+            }
+
+            .update-card p {
+                font-size: 13.5px;
+                color: var(--text-muted, #64748b);
+                line-height: 1.5;
+                margin: 0;
+            }
+
+            .icon-blue {
+                color: #2563eb;
+            }
+
+            /* Grid Categories Block Units */
+            .category-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 20px;
+            }
+            .cat-card {
+                background: var(--bg-card); border: 1px solid var(--border-color);
+                border-radius: 12px; padding: 24px; display: flex; flex-direction: column;
+                align-items: center; gap: 12px; font-weight: 500; cursor: pointer; transition: var(--transition);
+            }
+            .cat-card i { font-size: 2rem; color: var(--primary); transition: var(--transition); }
+            .cat-card:hover { background: var(--primary); color: #ffffff; }
+            .cat-card:hover i { color: #ffffff; transform: scale(1.1); }
+
+            /* Editorial Reviews Cards Components */
+            .test-card {
+                background: var(--bg-card); border: 1px solid var(--border-color);
+                border-radius: 16px; padding: 32px; box-shadow: var(--glass-shadow);
+                transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            }
+            .test-card:hover{
+                transform: translateY(-8px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                border-color: var(--accent);
+            }
+
+            .stars { color: #F59E0B; margin-bottom: 16px; font-size: 0.9rem; }
+            .test-card p { font-style: italic; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px; }
+            .user-info { display: flex; align-items: center; gap: 14px; }
+            .user-avatar {
+                width: 45px; height: 45px; border-radius: 50%; background-color: var(--bg-light);
+                display: flex; align-items: center; justify-content: center; color: var(--text-muted);
+            }
+            .user-info h4 { font-size: 1rem; }
+            .user-info span { font-size: 0.85rem; color: var(--text-muted); }
+
+            /* Accordion FAQs Accordion Boxes Elements */
+            .faq-wrapper { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+            .faq-item {
+                background: var(--bg-card); border: 1px solid var(--border-color);
+                border-radius: 12px; overflow: hidden; transition: var(--transition);
+            }
+            .faq-question {
+                width: 100%; padding: 20px 24px; background: none; border: none;
+                text-align: left; font-size: 1.05rem; font-weight: 600; color: var(--text-main);
+                display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+            }
+            .faq-question i { transition: var(--transition); color: var(--primary); }
+            .faq-answer {
+                max-height: 0; overflow: hidden; transition: max-height 0.3s cubic-bezier(0, 1, 0, 1);
+                padding: 0 24px; color: var(--text-muted); font-size: 0.95rem; line-height: 1.6;
+            }
+            .faq-item.active .faq-answer { max-height: 300px; padding-bottom: 20px; transition: max-height 0.3s cubic-bezier(1, 0, 1, 0); }
+            .faq-item.active .faq-question i { transform: rotate(45deg); }
+
+            /* Structural Contact Block Forms */
+            .contact-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 48px; }
+            .info-item { display: flex; gap: 16px; margin-bottom: 28px; }
+            .info-item i { font-size: 1.4rem; color: var(--primary); margin-top: 4px; }
+            .info-item h3 { font-size: 1.1rem; margin-bottom: 4px; }
+            .info-item p { color: var(--text-muted); font-size: 0.95rem; }
+            
+            /* Main Grid Container for Hero Info */
+            .hero-info-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 15px;
+                margin-top: 25px;
+                max-width: 550px;
+                width: 100%;
+            }
+
+            /* Individual Card Styling */
+            .info-card-step {
+                background: var(--bg-card);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                border:1px solid var(--border-color);
+                padding: 15px;
+                border-radius: 10px;
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+            }
+
+            /* Hover Effect */
+            .info-card-step:hover {
+                transform: translateY(-8px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                border-color: var(--accent);
+            }
+
+            /* Icons Global Styling */
+            .info-card-step i {
+                font-size: 18px;
+                margin-top: 2px;
+            }
+
+            /* Icon Colors Customization */
+            .info-card-step .icon-blue {
+                color: #2563eb;
+            }
+
+            .info-card-step .icon-green {
+                color: #10b981;
+            }
+
+            /* Text Content Elements Wrapper */
+            .info-card-content h4 {
+                margin: 0 0 5px 0;
+                font-size: 14px;
+                color: var(--text-main);
+                font-weight: 600;
+            }
+
+            .info-card-content p {
+                margin: 0;
+                font-size: 12px;
+                color: var(--text-muted, #64748b);
+                line-height: 1.4;
+            }
+            
+            .map-placeholder {
+                height: 200px; background-color: var(--border-color); border-radius: 12px;
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                gap: 8px; color: var(--text-muted); font-size: 0.9rem;
+            }
+
+            .contact-form { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 32px; box-shadow: var(--glass-shadow); }
+            .form-group { margin-bottom: 20px; }
+            .form-group label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 8px; }
+            .form-group input { 
+                width: 100%;padding: 12px 16px;border-radius: 8px;border: 1px solid var(--border-color);background-color: var(--bg-main);
+                color: var(--text-main);outline: none;transition: var(--transition);
+            }
+            .form-group textarea {
+                width: 100%;height: 120px !important;min-height: 120px !important;max-height: 120px !important;padding: 12px 16px;
+                border-radius: 8px;border: 1px solid var(--border-color);background-color: var(--bg-main);color: var(--text-main);
+                outline: none;transition: var(--transition);resize: none !important;overflow-y: auto;overflow-x: hidden;box-sizing: border-box;
+            }
+            .form-group input:focus, .form-group textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+
+            /* Footer Endnote System Signatures */
+            footer { background-color: var(--secondary); color: #94A3B8; padding: 60px 0 20px 0; font-size: 0.9rem; border-top: 1px solid var(--border-color); }
+            .footer-grid { display: grid; grid-template-columns: 1.5fr repeat(3, 1fr); gap: 48px; margin-bottom: 40px; }
+            footer h3 { color: #ffffff; font-size: 1.4rem; margin-bottom: 16px; }
+            footer h4 { color: #ffffff; font-size: 1.1rem; margin-bottom: 20px; }
+            footer p { line-height: 1.6; }
+            footer ul { list-style: none; }
+            footer ul li { margin-bottom: 12px; }
+            footer ul li a { color: #94A3B8; text-decoration: none; transition: var(--transition); }
+            footer ul li a:hover { color: #ffffff; padding-left: 4px; }
+            .social-links { display: flex; gap: 12px; margin-top: 20px; }
+            .social-links a {
+                width: 36px; height: 36px; border-radius: 50%; background-color: rgba(255,255,255,0.05);
+                color: #ffffff; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: var(--transition);
+            }
+            .social-links a:hover { background-color: var(--primary); }
+            .footer-bottom { text-align: center; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; }
+
+            /* Interactive Floating Operations Actions Buttons */
+            .scroll-top-btn {
+                position: fixed; bottom: 30px; right: 30px; width: 45px; height: 45px;
+                background-color: var(--primary); color: #ffffff; border: none; border-radius: 50%;
+                cursor: pointer; display: flex; align-items: center; justify-content: center;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15); opacity: 0; visibility: hidden; transition: var(--transition); z-index: 99;
+            }
+            .scroll-top-btn.show { opacity: 1; visibility: visible; }
+            .scroll-top-btn:hover { transform: translateY(-3px); background-color: var(--primary-hover); }
+
+            .chatbot-container { position: fixed; bottom: 30px; left: 30px; z-index: 99; }
+            .chatbot-btn {
+                width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent), #0D9488);
+                color: #ffffff; border: none; border-radius: 50%; cursor: pointer; display: flex;
+                align-items: center; justify-content: center; font-size: 1.3rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: var(--transition);
+            }
+            .chatbot-btn:hover { transform: scale(1.05); }
+
+            /* Adaptive Responsive UI Layout Rules Grid Breakpoints */
+            @media(max-width: 992px) {
+                .hero-grid { grid-template-columns: 1fr; text-align: center; gap: 32px; }
+                .hero-ctas { justify-content: center; }
+                .hero-text h1 { font-size: 2.8rem; }
+                .contact-grid { grid-template-columns: 1fr; gap: 32px; }
+                .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+            }
+
+            @media(max-width: 768px) {
+                .hamburger { display: block; }
+                .nav-menu {
+                    position: fixed; top: 73px; left: -100%; width: 100%; height: calc(100vh - 73px);
+                    background-color: var(--bg-main); flex-direction: column; padding: 40px 24px;
+                    gap: 24px; transition: 0.4s ease; border-top: 1px solid var(--border-color);
+                }
+                .nav-menu.open { left: 0; }
+                .dropdown, .register-btn { width: 100%; text-align: center; }
+                .dropdown-content { position: relative; width: 100%; width:-webkit-fill-available; }
+                .nav-actions { display: none; }
+                .nav-actions.open { display: flex; position: absolute; right: 80px; top: 16px; }
+                .timeline { grid-template-columns: 1fr; }
+            }
+        </Style>
+
+    </head>
+
+    <body>
+
+        <div class="preloader">
+            <div class="spinner"></div>
+        </div>
+
+        <header class="navbar">
+
+            <div class="nav-container">
+
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>GMS Portal</span>
+                </div>
+                
+                <nav class="nav-menu">
+                    <a href="#home" class="nav-link active">Home</a>
+                    <a href="#about" class="nav-link">About</a>
+                    <a href="#features" class="nav-link">Features</a>
+                    <a href="#process" class="nav-link">Process</a>
+                    <a href="#contact" class="nav-link">Contact</a>
+                </nav>
+
+                <div class="nav-actions">
+                    
+                    <button id="theme-toggle" class="theme-btn" aria-label="Toggle Theme">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                    
+                    <div class="dropdown">
+                        <button class="btn btn-secondary dropdown-toggle">Login <i class="fa-solid fa-chevron-down"></i></button>
+                        
+                        <div class="dropdown-content">
+                            <a href="HTML/ADMIN/admin_login.html"><i class="fa-solid fa-user-shield"></i> Admin Login</a>
+                            <a href="HTML/STAFF/staff_login.html"><i class="fa-solid fa-user-tie"></i> Staff Login</a>
+                            <a href="HTML/STUDENTS/student_login.html"><i class="fa-solid fa-user-graduate"></i> Student Login</a>
+                        </div>
+
+                    </div>
+
+                    <div class="dropdown">
+                        <button class="btn btn-primary register-btn dropdown-toggle">Register <i class="fa-solid fa-chevron-down"></i></button>
+                        
+                        <div class="dropdown-content">
+                            <a href="HTML/ADMIN/admin_signup.html"><i class="fa-solid fa-user-shield"></i> Admin Register</a>
+                            <a href="HTML/STAFF/staff_signup.html"><i class="fa-solid fa-user-tie"></i> Staff Register</a>
+                            <a href="HTML/STUDENTS/student_signup.html"><i class="fa-solid fa-user-graduate"></i> Student Register</a>
+                        </div>
+
+                    </div>
+
+                    <button class="hamburger" aria-label="Toggle Menu">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+
+                </div>
+
+            </div>
+
+        </header>
+
+        <section id="home" class="hero">
+            
+            <div class="hero-bg-shapes">
+                <div class="shape shape-1"></div>
+                <div class="shape shape-2"></div>
+            </div>
+            
+            <div class="container hero-grid">
+                
+                <div class="hero-text fade-in">
+                    <h1>Your Voice Matters</h1>
+                    <h2><span class="typing-text">Platform</span></h2>
+                    <p>A secure, transparent, and highly efficient platform designed to seamlessly register, track, and resolve college-level student grievances effortlessly.</p>
+                    
+                    <div class="hero-info-grid">
+
+                        <div class="info-card-step">
+                            <i class="fa-solid fa-bolt icon-green"></i>
+
+                            <div class="info-card-content">
+                                <h4>48-Hour Resolution</h4>
+                                <p>Most complaints are reviewed and resolved within 48 hours by the concerned department.</p>
+                            </div>
+                        </div>
+
+                        <div class="info-card-step">
+                            <i class="fa-solid fa-globe icon-blue"></i>
+
+                            <div class="info-card-content">
+                                <h4>Available 24×7</h4>
+                                <p>Submit, monitor, and manage your grievances anytime, from anywhere.</p>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="hero-image fade-in">
+
+                    <svg viewBox="0 0 500 400" width="100%" height="100%">
+                        <defs>
+                            <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#2563EB;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#14B8A6;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <rect x="50" y="80" width="320" height="240" rx="20" fill="#ffffff" opacity="0.1" stroke="url(#grad1)" stroke-width="2"/>
+                        <rect x="80" y="40" width="340" height="260" rx="20" fill="url(#grad1)" opacity="0.15"/>
+                        <circle cx="400" cy="120" r="40" fill="#14B8A6" opacity="0.6"/>
+                        <circle cx="100" cy="280" r="60" fill="#2563EB" opacity="0.4"/>
+                        <rect x="110" y="90" width="280" height="15" rx="5" fill="#2563EB" opacity="0.8"/>
+                        <rect x="110" y="120" width="180" height="10" rx="5" fill="#0F172A" opacity="0.5"/>
+                        <rect x="110" y="145" width="220" height="10" rx="5" fill="#0F172A" opacity="0.3"/>
+                        <rect x="110" y="180" width="80" height="30" rx="8" fill="#14B8A6"/>
+                        <rect x="200" y="180" width="80" height="30" rx="8" fill="#2563EB"/>
+                    </svg>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="portal-updates section">
+
+            <div class="container updates-container">
+
+                <div class="updates-header">
+                    <h2><i class="fa-solid fa-bullhorn icon-blue"></i> Latest Announcements</h2>
+                    <p>View the latest guidelines, rules, and important announcements related to the portal here.</p>
+                </div>
+                
+                <div class="updates-grid">
+
+                    <div class="update-card">
+                        <span class="update-badge badge-new">New</span>
+                        <span class="update-date">July 08, 2026</span>
+                        <h3>Hostel Wi-Fi Maintenance Redressal</h3>
+                        <p>Direct access has been granted to the nodal authorities for raising complaints regarding new hostel campus routers.</p>
+                    </div>
+
+                    <div class="update-card">
+                        <span class="update-badge badge-info">Update</span>
+                        <span class="update-date">July 05, 2026</span>
+                        <h3>Resolution Timeline Strict Rule</h3>
+                        <p>It is now mandatory to resolve all academic and accounts-related issues within a maximum of 48 hours.</p>
+                    </div>
+
+                    <div class="update-card">
+                        <span class="update-badge">Notice</span>
+                        <span class="update-date">June 28, 2026</span>
+                        <h3>Profile Verification Guidelines</h3>
+                        <p>All students are required to verify their University ID before logging into the new semester.</p>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <section id="about" class="why-choose section bg-light">
+
+            <div class="container">
+
+                <div class="section-header fade-in">
+                    <h2>Why Choose GMS?</h2>
+                    <p>A smart, secure, and fully digital platform designed to address and resolve your grievances on time.</p>
+                </div>
+
+                <div class="grid grid-4">
+
+                    <div class="benefit-card fade-in">
+                        <i class="fa-solid fa-bolt benefit-icon"></i>
+                        <h3>Fast Resolution</h3>
+                        <p>Your complaints go directly to the right department so they can be fixed quickly without any delay.</p>
+                    </div>
+
+                    <div class="benefit-card fade-in">
+                        <i class="fa-solid fa-shield-halved benefit-icon"></i>
+                        <h3>Secure System</h3>
+                        <p>Your personal details and complaints are fully safe and kept strictly private.</p>
+                    </div>
+
+                    <div class="benefit-card fade-in">
+                        <i class="fa-solid fa-eye benefit-icon"></i>
+                        <h3>Transparent Process</h3>
+                        <p>You can easily check the live status and see exactly what action is being taken on your complaint.</p>
+                    </div>
+
+                    <div class="benefit-card fade-in">
+                        <i class="fa-solid fa-leaf benefit-icon"></i>
+                        <h3>Paperless Ecosystem</h3>
+                        <p>Everything is 100% digital and online, helping us save paper and protect the environment.</p>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <section id="features" class="features section">
+
+            <div class="container">
+
+                <div class="section-header fade-in">
+                    <h2>Key Platform Features</h2>
+                    <p>Everything you need to report, manage, and resolve grievances smoothly in one place.</p>
+                </div>
+
+                <div class="grid grid-3">
+
+                    <div class="feature-card fade-in">
+                        <div class="f-icon-wrapper"><i class="fa-solid fa-lock"></i></div>
+                        <h3>Secure Login</h3>
+                        <p>Safe and separate login dashboards for Students, Staff, and Admins.</p>
+                    </div>
+
+                    <div class="feature-card fade-in">
+                        <div class="f-icon-wrapper"><i class="fa-solid fa-file-pen"></i></div>
+                        <h3>Easy Registration</h3>
+                        <p>Quick and simple sign-up process to get your account ready in just a few clicks.</p>
+                    </div>
+
+                    <div class="feature-card fade-in">
+                        <div class="f-icon-wrapper"><i class="fa-solid fa-route"></i></div>
+                        <h3>Complaint Tracking</h3>
+                        <p>Easily check the history and progress of your reported issues at any time.</p>
+                    </div>
+
+                    <div class="feature-card fade-in">
+                        <div class="f-icon-wrapper"><i class="fa-solid fa-user-gear"></i></div>
+                        <h3>Staff Assignment</h3>
+                        <p>Complaints are automatically assigned to the right officer for a faster solution.</p>
+                    </div>
+
+                    <div class="feature-card fade-in">
+                        <div class="f-icon-wrapper"><i class="fa-solid fa-bell"></i></div>
+                        <h3>Real-Time Status</h3>
+                        <p>Get instant updates on your screen whenever your complaint status changes.</p>
+                    </div>
+
+                    <div class="feature-card fade-in">
+                        <div class="f-icon-wrapper"><i class="fa-solid fa-star"></i></div>
+                        <h3>Feedback & Rating</h3>
+                        <p>Rate our service after your issue is resolved to help us improve the system.</p>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <section id="process" class="process section bg-light">
+            <div class="container">
+                <div class="section-header fade-in">
+                    <h2>How It Works</h2>
+                    <p>Follow these simplistic standard operating configurations to achieve problem resolutions.</p>
+                </div>
+                <div class="timeline">
+                    <div class="timeline-step fade-in">
+                        <span class="step-num">1</span>
+                        <h3>Student Login</h3>
+                        <p>Securely log in using your official university credentials.</p>
+                    </div>
+                    <div class="timeline-step fade-in">
+                        <span class="step-num">2</span>
+                        <h3>Submit Issue</h3>
+                        <p>Fill out the grievance form and select the relevant department category.</p>
+                    </div>
+                    <div class="timeline-step fade-in">
+                        <span class="step-num">3</span>
+                        <h3>Admin Reviews</h3>
+                        <p>The admin panel verifies your request and checks its validity.</p>
+                    </div>
+                    <div class="timeline-step fade-in">
+                        <span class="step-num">4</span>
+                        <h3>Staff Assigned</h3>
+                        <p>The issue is instantly routed to the dedicated department technician.</p>
+                    </div>
+                    <div class="timeline-step fade-in">
+                        <span class="step-num">5</span>
+                        <h3>Issue Resolved</h3>
+                        <p>The assigned staff resolves the issue and updates the resolution details.</p>
+                    </div>
+                    <div class="timeline-step fade-in">
+                        <span class="step-num">6</span>
+                        <h3>Provide Review</h3>
+                        <p>Rate the resolution and share your feedback to close the ticket.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="categories section">
+            <div class="container">
+                <div class="section-header fade-in">
+                    <h2>Supported Classifications</h2>
+                    <p>Direct issues straight down structured processing avenues across administrative hubs.</p>
+                </div>
+                <div class="category-grid">
+                    <div class="cat-card fade-in"><i class="fa-solid fa-book"></i><span>Academic</span></div>
+                    <div class="cat-card fade-in"><i class="fa-solid fa-hotel"></i><span>Hostel</span></div>
+                    <div class="cat-card fade-in"><i class="fa-solid fa-bookmark"></i><span>Library</span></div>
+                    <div class="cat-card fade-in"><i class="fa-solid fa-file-signature"></i><span>Examination</span></div>
+                    <div class="cat-card fade-in"><i class="fa-solid fa-wallet"></i><span>Accounts</span></div>
+                    <div class="cat-card fade-in"><i class="fa-solid fa-bus"></i><span>Transport</span></div>
+                    <div class="cat-card fade-in"><i class="fa-solid fa-flask"></i><span>Laboratory</span></div>
+                    <div class="cat-card fade-in"><i class="fa-solid fa-laptop-code"></i><span>IT Support</span></div>
+                    <div class="cat-card fade-in"><i class="fa-solid fa-utensils"></i><span>Cafeteria</span></div>
+                    <div class="cat-card fade-in"><i class="fa-solid fa-building-columns"></i><span>Infrastructure</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="testimonials section bg-light">
+            <div class="container">
+                <div class="section-header fade-in">
+                    <h2>Student Voices</h2>
+                    <p>Read true experiences from system users documenting process interactions directly.</p>
+                </div>
+                <div class="grid grid-3">
+                    <div class="test-card fade-in">
+                        <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+                        <p>"The response speed blew me away. My portal logging bugs got fixed within 24 hours seamlessly!"</p>
+                        <div class="user-info">
+                            <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+                            <div>
+                                <h4>Rahul Sharma</h4>
+                                <span>B.Tech CSE</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="test-card fade-in">
+                        <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+                        <p>"Extremely transparent module profiles. Seeing precisely which technician owned my repair task builds incredible trust."</p>
+                        <div class="user-info">
+                            <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+                            <div>
+                                <h4>Sneha Reddy</h4>
+                                <span>B.Tech ECE</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="test-card fade-in">
+                        <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i></div>
+                        <p>"Hostel Wi-Fi issue allocations reached straight into technicians dashboards. Very intuitive system setup."</p>
+                        <div class="user-info">
+                            <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+                            <div>
+                                <h4>Arjun Verma</h4>
+                                <span>B.Tech ME</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="faq section">
+            <div class="container">
+                <div class="section-header fade-in">
+                    <h2>Frequently Asked Questions</h2>
+                    <p>Find immediate clarifications around elementary operations rulesets directly.</p>
+                </div>
+                <div class="faq-wrapper">
+                    <div class="faq-item fade-in">
+                        <button class="faq-question">How do I register? <i class="fa-solid fa-plus"></i></button>
+                        <div class="faq-answer"><p>Click student registration link elements placed inside header layouts. Submit valid university details to create personalized profiles instantly.</p></div>
+                    </div>
+                    <div class="faq-item fade-in">
+                        <button class="faq-question">How can I track my complaint? <i class="fa-solid fa-plus"></i></button>
+                        <div class="faq-answer"><p>Access operations pipelines using personalized generated registration receipt keys inputted inside search bars anytime.</p></div>
+                    </div>
+                    <div class="faq-item fade-in">
+                        <button class="faq-question">How long does resolution take? <i class="fa-solid fa-plus"></i></button>
+                        <div class="faq-answer"><p>Standard category cases target closure windows within 48-72 business hours max depending heavily upon processing department volumes.</p></div>
+                    </div>
+                    <div class="faq-item fade-in">
+                        <button class="faq-question">Can I edit my complaint? <i class="fa-solid fa-plus"></i></button>
+                        <div class="faq-answer"><p>Edits remain permissible solely while parameters reside structural phases marked strictly as 'Pending Review' inside systems.</p></div>
+                    </div>
+                    <div class="faq-item fade-in">
+                        <button class="faq-question">Who can view my complaint? <i class="fa-solid fa-plus"></i></button>
+                        <div class="faq-answer"><p>Records maintain restrictive access rules viewing parameters solely across Admin controllers and designated staff processors assigned.</p></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="contact" class="contact section bg-light">
+            <div class="container">
+                <div class="section-header fade-in">
+                    <h2>Get In Touch</h2>
+                    <p>Have system queries? Connect directly with campus administration nodal points.</p>
+                </div>
+                <div class="contact-grid">
+                    <div class="contact-info fade-in">
+                        <div class="info-item">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <div>
+                                <h3>Campus Address</h3>
+                                <p>Chhatabar, Via Janla, Bhubaneswar, Khordha, Odisha - 752054</p>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <i class="fa-solid fa-envelope"></i>
+                            <div>
+                                <h3>Email Support</h3>
+                                <p>To be added</p>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <i class="fa-solid fa-phone"></i>
+                            <div>
+                                <h3>Contact Helpline</h3>
+                                <p>To be added</p>
+                            </div>
+                        </div>
+                        <div class="map-placeholder">
+                            <i class="fa-solid fa-map-location-dot"></i>
+                            <span>Interactive Google Map View Simulation</span>
+                        </div>
+                    </div>
+                    <form class="contact-form fade-in" onsubmit="event.preventDefault();">
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" placeholder="Enter Name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email Address</label>
+                            <input type="email" placeholder="Enter Email" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Your Message</label>
+                            <textarea rows="5" placeholder="Type message parameters..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <div class="container footer-grid">
+                <div>
+                    <h3><i class="fa-solid fa-shield-alt"></i> GMS Portal</h3>
+                    <p>An institutional-grade platform built specifically to support seamless grievance solutions handling workflows smoothly.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
+                        <a href="#"><i class="fa-brands fa-twitter"></i></a>
+                        <a href="#"><i class="fa-brands fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+                <div>
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#home">Home Portal</a></li>
+                        <li><a href="#about">About Framework</a></li>
+                        <li><a href="#features">Platform Metrics</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Services</h4>
+                    <ul>
+                        <li><a href="/HTML/STUDENTS/raise_complaint.html">Academic Routing</a></li>
+                        <li><a href="/HTML/STUDENTS/raise_complaint.html">Hostel Allocation Issues</a></li>
+                        <li><a href="/HTML/STUDENTS/raise_complaint.html">Financial Redressals</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Support</h4>
+                    <ul>
+                        <li><a href="/HTML/STUDENTS/student_login.html">Student Sign In</a></li>
+                        <li><a href="/HTML/STAFF/staff_login.html">Staff Sign In</a></li>
+                        <li><a href="/HTML/ADMIN/admin_login.html">Admin Sign In</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Grievance Management System. Engineered for Final Year B.Tech Specifications.</p>
+            </div>
+        </footer>
+
+        <button id="scroll-top" class="scroll-top-btn"><i class="fa-solid fa-arrow-up"></i></button>
+        <div class="chatbot-container">
+            <button id="chatbot-toggle" class="chatbot-btn"><i class="fa-solid fa-comment-dots"></i></button>
+        </div>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+    
+                // --- Preloader Controller Logic ---
+                const preloader = document.querySelector(".preloader");
+                window.addEventListener("load", () => {
+                    preloader.style.opacity = "0";
+                    setTimeout(() => preloader.style.visibility = "hidden", 500);
+                });
+                // Fallback if load event already executed
+                if (document.readyState === "complete") {
+                    preloader.style.opacity = "0";
+                    preloader.style.visibility = "hidden";
+                }
+
+                // --- Adaptive Theme Toggle (Dark/Light Mode) ---
+                const themeToggle = document.getElementById("theme-toggle");
+                const currentTheme = localStorage.getItem("theme") || "light";
+                
+                document.documentElement.setAttribute("data-theme", currentTheme);
+                updateThemeIcon(currentTheme);
+
+                themeToggle.addEventListener("click", () => {
+                    let theme = document.documentElement.getAttribute("data-theme");
+                    let newTheme = theme === "dark" ? "light" : "dark";
+                    document.documentElement.setAttribute("data-theme", newTheme);
+                    localStorage.setItem("theme", newTheme);
+                    updateThemeIcon(newTheme);
+                });
+
+                function updateThemeIcon(theme) {
+                    const icon = themeToggle.querySelector("i");
+                    if (theme === "dark") {
+                        icon.className = "fa-solid fa-sun";
+                    } else {
+                        icon.className = "fa-solid fa-moon";
+                    }
+                }
+
+                // --- Mobile Navigation Hamburgers Controller ---
+                const hamburger = document.querySelector(".hamburger");
+                const navMenu = document.querySelector(".nav-menu");
+                const navActions = document.querySelector(".nav-actions");
+
+                hamburger.addEventListener("click", () => {
+                    navMenu.classList.toggle("open");
+                    hamburger.querySelector("i").classList.toggle("fa-xmark");
+                });
+
+                // Close mobile menu when active link options get triggered
+                document.querySelectorAll(".nav-link").forEach(link => {
+                    link.addEventListener("click", () => {
+                        navMenu.classList.remove("open");
+                        hamburger.querySelector("i").className = "fa-solid fa-bars";
+                    });
+                });
+
+                // --- Hero Text Auto Typing Animation Sequence ---
+                const strings = [
+                    "Transparent Redressal Systems.",
+                    "Accountable Issue Allocations.",
+                    "Fast Operational Escalations."
+                ];
+                let stringIdx = 0, charIdx = 0, isDeleting = false;
+                const typingSpan = document.querySelector(".typing-text");
+
+                function typeEffect() {
+                    const currentString = strings[stringIdx];
+                    if (isDeleting) {
+                        typingSpan.textContent = currentString.substring(0, charIdx - 1);
+                        charIdx--;
+                    } else {
+                        typingSpan.textContent = currentString.substring(0, charIdx + 1);
+                        charIdx++;
+                    }
+
+                    let speed = isDeleting ? 40 : 80;
+                    if (!isDeleting && charIdx === currentString.length) {
+                        speed = 1800; // Pause at end of text string
+                        isDeleting = true;
+                    } else if (isDeleting && charIdx === 0) {
+                        isDeleting = false;
+                        stringIdx = (stringIdx + 1) % strings.length;
+                        speed = 400; // Inter-string pause transition windows
+                    }
+                    setTimeout(typeEffect, speed);
+                }
+                if(typingSpan) typeEffect();
+
+                // --- High-Performance Intersection Observer for Fade-In Effects ---
+                const fadeElements = document.querySelectorAll(".fade-in");
+                const fadeObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add("appear");
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.1, rootMargin: "0px 0px -40px 0px" });
+
+                fadeElements.forEach(el => fadeObserver.observe(el));
+
+                // --- Realtime Counter Numerical Scaling Metrics ---
+                const counters = document.querySelectorAll(".counter");
+                const counterObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const target = +entry.target.getAttribute("data-target");
+                            let count = 0;
+                            const increment = target / 40; // Control scaling iteration loops
+                            
+                            const updateCounter = () => {
+                                count += increment;
+                                if (count < target) {
+                                    entry.target.textContent = Math.ceil(count);
+                                    requestAnimationFrame(updateCounter);
+                                } else {
+                                    entry.target.textContent = target;
+                                }
+                            };
+                            updateCounter();
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.8 });
+
+                counters.forEach(c => counterObserver.observe(c));
+
+                // --- Collaborative Collapsible FAQ Items Actions ---
+                const faqQuestions = document.querySelectorAll(".faq-question");
+                faqQuestions.forEach(q => {
+                    q.addEventListener("click", () => {
+                        const currentItem = q.parentElement;
+                        
+                        // Toggle current active state metrics natively
+                        currentItem.classList.toggle("active");
+                        
+                        // Close other items safely to prevent viewport overflows
+                        document.querySelectorAll(".faq-item").forEach(item => {
+                            if (item !== currentItem) item.classList.remove("active");
+                        });
+                    });
+                });
+
+                // --- Back To Top Screen Scrolling Navigation Rules ---
+                const scrollTopBtn = document.getElementById("scroll-top");
+                window.addEventListener("scroll", () => {
+                    if (window.scrollY > 500) {
+                        scrollTopBtn.classList.add("show");
+                    } else {
+                        scrollTopBtn.classList.remove("show");
+                    }
+                });
+                scrollTopBtn.addEventListener("click", () => {
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                });
+
+                // --- Dynamic Nav Link Active Highlighting on Scroll ---
+                const sections = document.querySelectorAll("section[id]");
+                window.addEventListener("scroll", () => {
+                    let scrollY = window.scrollY;
+                    sections.forEach(current => {
+                        const sectionHeight = current.offsetHeight;
+                        const sectionTop = current.offsetTop - 100;
+                        const sectionId = current.getAttribute("id");
+                        
+                        if (scrollY > sectionTop && scrollY <= sectionTop + sectionHeight) {
+                            document.querySelector(`.nav-menu a[href*=${sectionId}]`)?.classList.add("active");
+                        } else {
+                            document.querySelector(`.nav-menu a[href*=${sectionId}]`)?.classList.remove("active");
+                        }
+                    });
+                });
+            });
+        </script>
+
+    </body>
+
+</html>

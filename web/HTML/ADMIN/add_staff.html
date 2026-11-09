@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Add Staff - GMS</title>
+
+        <!-- CSS -->
+        <link rel="stylesheet" href="../../CSS/style.css">
+
+        <!-- Icons -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </head>
+
+    <body class="hide-search-page">
+
+        <div class="admin-container">
+
+            <aside class="sidebar">
+                <div class="sidebar-brand">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>GMS Admin</span>
+                </div>
+
+                <ul class="sidebar-menu">
+                    <li class="sidebar-item">
+                        <a href="admin_dashboard.html">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="view_complaints.html">
+                            <i class="fa-solid fa-list-check"></i>
+                            <span>View Complaints</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="assign_complaint.html">
+                            <i class="fa-solid fa-user-check"></i>
+                            <span>Assign Complaint</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="students.html">
+                            <i class="fa-solid fa-graduation-cap"></i>
+                            <span>Students</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item active">
+                        <a href="staff.html">
+                            <i class="fa-solid fa-user-tie"></i>
+                            <span>Staff</span>
+                        </a>
+                    </li>
+                </ul>
+            </aside>
+
+            <nav class="navbar">
+
+                <div class="navbar-title">
+                    <h2>Admin Panel</h2>
+                </div>
+
+                <div class="navbar-right">
+
+                    <div class="navbar-search">
+                        <input type="text" id="adminSearchInput" placeholder="Search complaints, students...">
+                    </div>
+
+                    <div class="navbar-profile-container">
+
+                        <div class="navbar-profile" id="profileTrigger">
+                            <i class="fa-solid fa-circle-user profile-icon"></i>
+                            <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                        </div>
+
+                        <div class="profile-dropdown" id="profileDropdown">
+
+                            <div class="dropdown-header">
+                                <h4 id="adminName"></h4>
+                                <span class="dropdown-role">Super Admin</span>
+                            </div>
+
+                            <div class="dropdown-body">
+                                <div class="info-item">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <span id="adminMobile"></span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-envelope"></i>
+                                    <span id="adminEmail"></span>
+                                </div>
+                            </div>
+
+                            <hr class="dropdown-divider">
+
+                            <ul class="dropdown-menu-links">
+
+                                <li>
+                                    <a href="admin_change_password.html">
+                                        <i class="fa-solid fa-lock"></i>
+                                        <span>Change Password</span>
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a href="../../Home.html" class="logout-link">
+                                        <i class="fa-solid fa-right-from-bracket"></i>
+                                        <span>Logout</span>
+                                    </a>
+                                </li>
+
+                            </ul>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </nav>
+
+            <main class="main-content">
+
+                <!-- BACK BUTTON -->
+                <div style="margin-bottom: 1.5rem;">
+                    <a href="staff.html" style="text-decoration: none; color: var(--text-muted); font-size: 0.9rem;">
+                        <i class="fa-solid fa-arrow-left"></i> Back to Staff List
+                    </a>
+                </div>
+
+                <!-- FORM -->
+                <div class="form-container">
+
+                    <h2 style="margin-bottom: 1.5rem;">Add New Staff Member</h2>
+
+                    <form id="addStaffForm" action="/api/admin/staff" method="POST">
+
+                        <!-- NAME -->
+                        <div class="form-group">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" id="staffName" name="name" class="form-control" placeholder="Enter full name" required>
+                            <span id="nameError" class="error-hint"></span>
+                        </div>
+
+                        <!-- MOBILE -->
+                        <div class="form-group">
+                            <label class="form-label">Mobile Number</label>
+                            <input type="text" id="staffMobile" name="mobile" class="form-control" placeholder="Enter mobile number" required>
+                            <span id="mobileError" class="error-hint"></span>
+                        </div>
+
+                        <!-- EMAIL -->
+                        <div class="form-group">
+                            <label class="form-label">Email Address</label>
+                            <input type="email" id="staffEmail" name="email" class="form-control" placeholder="example@gmail.com" required>
+                            <span id="emailError" class="error-hint"></span>
+                        </div>
+
+                        <!-- Department -->
+                        <div class="form-group">
+                            <label class="form-label">Department</label>
+
+                            <select id="staffDepartment" name="department" class="form-control" required>
+
+                                <option value="" disabled selected>-- Select Department --</option>
+
+                                <option>Academic Section</option>
+                                <option>Accounts</option>
+                                <option>Administration</option>
+                                <option>Admission Cell</option>
+                                <option>Cafeteria</option>
+                                <option>Civil Lab</option>
+                                <option>Civil Maintenance</option>
+                                <option>Computer Lab</option>
+                                <option>Electrical Lab</option>
+                                <option>Electrical Maintenance</option>
+                                <option>Electronics Lab</option>
+                                <option>Examination Cell</option>
+                                <option>Hostel</option>
+                                <option>Housekeeping</option>
+                                <option>IT &amp; Network Support</option>
+                                <option>Laboratory</option>
+                                <option>Library</option>
+                                <option>Maintenance</option>
+                                <option>Mechanical Lab</option>
+                                <option>Plumbing</option>
+                                <option>Scholarship Cell</option>
+                                <option>Security</option>
+                                <option>Sports Department</option>
+                                <option>Student Welfare</option>
+                                <option>Training &amp; Placement</option>
+                                <option>Transport</option>
+
+                            </select>
+                            <span id="departmentError" class="error-hint"></span>
+
+                        </div>
+
+                        <!-- PASSWORD -->
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <div class="password-field">
+                                <input type="password" id="staffPassword" name="password" class="form-control" placeholder="Enter password" required>
+                                <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('staffPassword', this)"></i>
+                            </div>
+                            <span id="passwordError" class="error-hint"></span>
+                        </div>
+
+                        <!-- Security Question -->
+                        <div class="form-group">
+                            <label class="form-label">Security Question</label>
+
+                            <select id="addSecurityQuestion" name="securityQuestion" class="form-control" required>
+
+                                <option value="" disabled selected>-- Select Security Question --</option>
+
+                                <option>What is your favourite color?</option>
+                                <option>What is your pet's name?</option>
+                                <option>What is your favourite food?</option>
+                                <option>What is your favourite teacher's name?</option>
+                                <option>What is your birthplace?</option>
+
+                            </select>
+                            <span id="securityQuestionError" class="error-hint"></span>
+
+                        </div>
+
+                        <!-- Security Answer -->
+                        <div class="form-group">
+                            <label class="form-label">Security Answer</label>
+                            <input type="text" id="addSecurityAnswer" name="securityAnswer" class="form-control" placeholder="Enter security answer" required>
+                            <span id="securityAnswerError" class="error-hint"></span>
+                        </div>
+
+                        <!-- BUTTONS -->
+                        <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+
+                            <div class="btn-group">
+                                <a href="staff.html" class="btn btn-cancel" style="text-decoration: none;">
+                                    <i class="fa-solid fa-xmark"></i> Cancel
+                                </a>
+
+                                <button type="submit" name="action" value="add" class="btn btn-assign">
+                                    <i class="fa-solid fa-user-plus"></i> Add Staff
+                                </button>
+                            </div>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </main>
+
+        </div>
+
+        <script>
+
+            document.addEventListener("DOMContentLoaded", function () {
+
+                // =====================================
+                // Profile Dropdown
+                // =====================================
+
+                const profile = document.getElementById("profileTrigger");
+                const dropdown = document.getElementById("profileDropdown");
+
+                if(profile){
+
+                    profile.addEventListener("click",function(e){
+
+                        e.stopPropagation();
+                        profile.classList.toggle("active");
+                        dropdown.classList.toggle("show");
+
+                    });
+
+                    document.addEventListener("click",function(e){
+
+                        if(!profile.contains(e.target) &&
+                        !dropdown.contains(e.target)){
+
+                            profile.classList.remove("active");
+                            dropdown.classList.remove("show");
+
+                        }
+
+                    });
+
+                }
+
+                // =====================================
+                // Admin Profile
+                // =====================================
+
+                fetch("/api/admin/profile")
+                .then(res => res.json())
+                .then(data => {
+
+                    document.getElementById("adminName").textContent = data.adminName;
+                    document.getElementById("adminMobile").textContent = data.mobile;
+                    document.getElementById("adminEmail").innerHTML = data.email.replace("@","@<wbr>");
+
+                });
+
+            });
+
+
+            // =====================================
+            // Password Show Hide
+            // =====================================
+
+            function togglePassword(fieldId,icon){
+
+                const field=document.getElementById(fieldId);
+
+                if(field.type==="password"){
+
+                    field.type="text";
+                    icon.classList.replace("fa-eye","fa-eye-slash");
+
+                }else{
+
+                    field.type="password";
+                    icon.classList.replace("fa-eye-slash","fa-eye");
+
+                }
+
+            }
+
+
+            // =====================================
+            // Validation
+            // =====================================
+
+            const form=document.getElementById("addStaffForm");
+
+            const nameInput=document.getElementById("staffName");
+            const mobileInput=document.getElementById("staffMobile");
+            const emailInput=document.getElementById("staffEmail");
+            const departmentInput=document.getElementById("staffDepartment");
+            const passwordInput=document.getElementById("staffPassword");
+            const securityQuestion = document.getElementById("addSecurityQuestion");
+            const securityAnswer = document.getElementById("addSecurityAnswer");
+
+            const nameError=document.getElementById("nameError");
+            const mobileError=document.getElementById("mobileError");
+            const emailError=document.getElementById("emailError");
+            const departmentError=document.getElementById("departmentError");
+            const passwordError=document.getElementById("passwordError");
+            const securityQuestionError = document.getElementById("securityQuestionError");
+            const securityAnswerError = document.getElementById("securityAnswerError");
+
+
+            // =====================================
+            // Validation Functions
+            // =====================================
+
+            function isValidName(name){
+
+                name=name.trim();
+
+                const words=name.split(/\s+/);
+
+                return words.length>=2 &&
+                    words.length<=5 &&
+                    /^[A-Za-z ]+$/.test(name);
+
+            }
+
+            function isValidMobile(mobile){
+
+                return /^[6-9]\d{9}$/.test(mobile);
+
+            }
+
+            function isValidEmail(email){
+
+                return /^[a-z0-9._%+-]+@gmail\.com$/.test(email);
+
+            }
+
+
+            // =====================================
+            // Remove Invalid Characters
+            // =====================================
+
+            nameInput.addEventListener("input",function(){
+
+                nameError.innerHTML="";
+                nameError.classList.remove("show");
+                this.value=this.value.replace(/\s+/g," ");
+
+            });
+
+            mobileInput.addEventListener("input",function(){
+
+                mobileError.innerHTML="";
+                mobileError.classList.remove("show");
+
+                this.value=this.value.replace(/\D/g,"");
+
+                if(this.value.length>10){
+
+                    this.value=this.value.slice(0,10);
+
+                }
+
+            });
+
+            emailInput.addEventListener("input",function(){
+
+                emailError.innerHTML="";
+                emailError.classList.remove("show");
+                this.value=this.value.replace(/\s/g,"").toLowerCase();
+
+            });
+
+            departmentInput.addEventListener("change",function(){
+
+                departmentError.innerHTML="";
+                departmentError.classList.remove("show");
+
+            });
+
+            passwordInput.addEventListener("input",function(){
+
+                passwordError.innerHTML="";
+                passwordError.classList.remove("show");
+                this.value=this.value.replace(/\s/g,"");
+
+            });
+
+            securityQuestion.addEventListener("change", function () {
+
+                securityQuestionError.innerHTML = "";
+                securityQuestionError.classList.remove("show");
+
+            });
+
+            securityAnswer.addEventListener("input", function () {
+
+                securityAnswerError.innerHTML = "";
+                securityAnswerError.classList.remove("show");
+                this.value = this.value.replace(/\s+/g, " ");
+
+            });
+
+
+            // =====================================
+            // Scroll To Error
+            // =====================================
+
+            function scrollToError(element){
+
+                element.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+
+                element.focus();
+
+            }
+
+
+            // =====================================
+            // Form Validation
+            // =====================================
+
+            form.addEventListener("submit",function(e){
+
+                e.preventDefault();
+
+                nameError.innerHTML="";
+                mobileError.innerHTML="";
+                emailError.innerHTML="";
+                departmentError.innerHTML="";
+                passwordError.innerHTML="";
+                securityQuestionError.innerHTML = "";
+                securityAnswerError.innerHTML = "";
+
+                nameError.classList.remove("show");
+                mobileError.classList.remove("show");
+                emailError.classList.remove("show");
+                departmentError.classList.remove("show");
+                passwordError.classList.remove("show");
+
+                let valid=true;
+
+                const name=nameInput.value.trim();
+                const mobile=mobileInput.value.trim();
+                const email=emailInput.value.trim().toLowerCase();
+                const department=departmentInput.value;
+                const password=passwordInput.value.trim();
+                const question = securityQuestion.value;
+                const answer = securityAnswer.value.trim();
+
+                // Name
+
+                if(name===""){
+
+                    nameError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Full Name is required.';
+                    nameError.classList.add("show");
+                    valid=false;
+
+                }
+                else if(!isValidName(name)){
+
+                    nameError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Name must contain 2 to 5 words and only letters.';
+                    nameError.classList.add("show");
+                    valid=false;
+
+                }
+
+                // Mobile
+
+                if(mobile===""){
+
+                    mobileError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Mobile Number is required.';
+                    mobileError.classList.add("show");
+                    valid=false;
+
+                }
+                else if(!isValidMobile(mobile)){
+
+                    mobileError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Enter a valid 10-digit mobile number.';
+                    mobileError.classList.add("show");
+                    valid=false;
+
+                }
+
+                // Email
+
+                if(email===""){
+
+                    emailError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Email is required.';
+                    emailError.classList.add("show");
+                    valid=false;
+
+                }
+                else if(!isValidEmail(email)){
+
+                    emailError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Enter a valid Gmail address.';
+                    emailError.classList.add("show");
+                    valid=false;
+
+                }
+
+                // Department
+
+                if(department===""){
+
+                    departmentError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Please select a department.';
+                    departmentError.classList.add("show");
+                    valid=false;
+
+                }
+
+                // Password
+
+                if(password===""){
+
+                    passwordError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Password is required.';
+                    passwordError.classList.add("show");
+                    valid=false;
+
+                }
+                else if(password.length<6){
+
+                    passwordError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Password must be at least 6 characters.';
+                    passwordError.classList.add("show");
+                    valid=false;
+
+                }
+
+                // Security Question
+
+                if (question === "") {
+
+                    securityQuestionError.innerHTML ='<i class="fa-solid fa-circle-exclamation"></i> Please select a security question.';
+                    valid = false;
+
+                }
+
+                // Security Answer
+
+                if (answer === "") {
+
+                    securityAnswerError.innerHTML ='<i class="fa-solid fa-circle-exclamation"></i> Security Answer is required.';
+                    valid = false;
+
+                }if(valid){ GMS.post("/api/admin/staff", GMS.formData(form)).then(function(data){ alert(data.message || "Staff member added."); GMS.go("/HTML/ADMIN/staff.html"); }).catch(function(err){ alert(err.message); }); } else {
+
+                    if (nameError.innerHTML !== "") {
+
+                        scrollToError(nameInput);
+
+                    } else if (mobileError.innerHTML !== "") {
+
+                        scrollToError(mobileInput);
+
+                    } else if (emailError.innerHTML !== "") {
+
+                        scrollToError(emailInput);
+
+                    } else if (departmentError.innerHTML !== "") {
+
+                        scrollToError(departmentInput);
+
+                    } else if (passwordError.innerHTML !== "") {
+
+                        scrollToError(passwordInput);
+
+                    } else if (securityQuestionError.innerHTML !== "") {
+
+                        scrollToError(securityQuestion);
+
+                    } else if (securityAnswerError.innerHTML !== "") {
+
+                        scrollToError(securityAnswer);
+
+                    }
+
+                }
+
+            });
+
+
+            // =====================================
+            // Success / Error Popup
+            // =====================================
+
+            window.onload = function () {
+
+                const params = new URLSearchParams(window.location.search);
+
+                if (params.has("error")) {
+
+                    const error = params.get("error");
+
+                    if (error === "Email Already Exists") {
+
+                        emailError.innerHTML ='<i class="fa-solid fa-circle-exclamation"></i> ' + error;
+                        scrollToError(emailInput);
+
+                    } else if (error === "Mobile Already Exists") {
+
+                        mobileError.innerHTML ='<i class="fa-solid fa-circle-exclamation"></i> ' + error;
+                        scrollToError(mobileInput);
+
+                    } else {
+
+                        alert(error);
+
+                    }
+
+                }
+
+                if (params.has("success")) {
+
+                    alert(params.get("success"));
+
+                }
+
+                window.history.replaceState({}, document.title, window.location.pathname);
+
+            };
+
+        </script>
+
+    <script src="/gms-api.js"></script>
+    </body>
+
+</html>

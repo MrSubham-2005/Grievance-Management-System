@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <title>Staff Registration - Grievance Management System</title>
+
+        <link rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+        <link rel="stylesheet" href="../../CSS/student_staff_login.css">
+
+    </head>
+
+    <body>
+
+        <main class="login-wrapper">
+
+            <div class="login-container">
+
+                <section class="login-form-section">
+
+                    <header class="form-header">
+                        <h1>Staff Registration</h1>
+                        <p class="subtitle">
+                            Create your Grievance Management System account.
+                        </p>
+                    </header>
+
+                    <form id="gmsSignupForm" action="/api/auth/staff/signup" method="POST">
+
+                        <div class="input-field-group">
+
+                            <div class="input-control-wrapper">
+                                <i class="fa-solid fa-user input-icon"></i>
+                                <input type="text" id="staffName" name="staffName" placeholder=" " required>
+                                <label for="staffName" class="floating-label">
+                                    Full Name
+                                </label>
+                            </div>
+                            <span class="validation-msg" id="nameError"></span>
+
+                        </div>
+
+                        <div class="input-field-group">
+
+                            <div class="input-control-wrapper">
+                                <i class="fa-solid fa-phone input-icon"></i>
+                                <input type="text" id="staffMobile" name="staffMobile" placeholder=" " required>
+                                <label for="staffMobile" class="floating-label">
+                                    Mobile Number
+                                </label>
+                            </div>
+                            <span class="validation-msg" id="mobileError"></span>
+
+                        </div>
+
+                        <div class="input-field-group">
+
+                            <div class="input-control-wrapper">
+                                <i class="fa-solid fa-envelope input-icon"></i>
+                                <input type="text" id="staffEmail" name="staffEmail" placeholder=" " required>
+                                <label for="staffEmail" class="floating-label">
+                                    Gmail Address
+                                </label>
+                            </div>
+                            <span class="validation-msg" id="emailError"></span>
+
+                        </div>
+
+                        <div class="form-group">
+
+                            <select id="staffDepartment" name="department" class="form-control" required>
+
+                                <option value="" disabled selected>-- Select Department --</option>
+
+                                <option>Academic Section</option>
+                                <option>Accounts</option>
+                                <option>Administration</option>
+                                <option>Admission Cell</option>
+                                <option>Cafeteria</option>
+                                <option>Civil Lab</option>
+                                <option>Civil Maintenance</option>
+                                <option>Computer Lab</option>
+                                <option>Electrical Lab</option>
+                                <option>Electrical Maintenance</option>
+                                <option>Electronics Lab</option>
+                                <option>Examination Cell</option>
+                                <option>Hostel</option>
+                                <option>Housekeeping</option>
+                                <option>IT &amp; Network Support</option>
+                                <option>Laboratory</option>
+                                <option>Library</option>
+                                <option>Maintenance</option>
+                                <option>Mechanical Lab</option>
+                                <option>Plumbing</option>
+                                <option>Scholarship Cell</option>
+                                <option>Security</option>
+                                <option>Sports Department</option>
+                                <option>Student Welfare</option>
+                                <option>Training &amp; Placement</option>
+                                <option>Transport</option>
+
+                            </select>
+                            <span class="validation-msg" id="departmentError"></span>
+
+                        </div>
+
+                        <div class="input-field-group">
+
+                            <div class="input-control-wrapper">
+                                <i class="fa-solid fa-lock input-icon"></i>
+                                <input type="password" id="staffPassword" name="staffPassword" placeholder=" " required>
+                                <label for="staffPassword" class="floating-label">
+                                    Password
+                                </label>
+
+                                <button type="button" id="togglePassword" class="btn-toggle-password">
+                                    <i class="fa-regular fa-eye"></i>
+                                </button>
+                            </div>
+                            <span class="validation-msg" id="passwordError"></span>
+
+                        </div>
+
+                        <div class="input-field-group">
+
+                            <div class="input-control-wrapper">
+                                <i class="fa-solid fa-lock input-icon"></i>
+                                <input type="password" id="staffConformPassword" name="staffConformPassword" placeholder=" " required>
+                                <label for="staffConformPassword" class="floating-label">
+                                    Conform Password
+                                </label>
+
+                                <button type="button" id="togglestaffConformPassword" class="btn-toggle-password">
+                                    <i class="fa-regular fa-eye"></i>
+                                </button>
+                            </div>
+                            <span class="validation-msg" id="staffConformPasswordError"></span>
+
+                        </div>
+
+                        <div class="form-group">
+
+                            <select id="staffSecurityQuestion" name="securityQuestion" class="form-control" required>
+
+                                <option value="" disabled selected>-- Select Security Question --</option>
+
+                                <option>What is your favourite color?</option>
+                                <option>What is your pet's name?</option>
+                                <option>What is your favourite food?</option>
+                                <option>What is your favourite teacher's name?</option>
+                                <option>What is your birthplace?</option>
+
+                            </select>
+                            <span id="securityQuestionError" class="error-hint"></span>
+
+                        </div>
+
+                        <div class="input-field-group">
+
+                            <div class="input-control-wrapper">
+                                <i class="fa-solid fa-circle-question input-icon"></i>
+                                <input type="text" id="staffSecurityAnswer" name="securityAnswer" placeholder=" " required>
+                                <label for="staffSecurityAnswer" class="floating-label"> Security Answer </label>
+                            </div>
+                            <span class="validation-msg" id="securityAnswerError"></span>
+
+                        </div>
+
+                        <button type="submit" class="btn-login">
+                            Register
+                        </button>
+
+                    </form>
+
+                </section>
+
+                <section class="signup-welcome-banner-section">
+
+                    <div class="bg-shape shape-1"></div>
+                    <div class="bg-shape shape-2"></div>
+                    <div class="bg-shape shape-3"></div>
+
+                    <div class="signup-welcome-content-wrapper">
+
+                        <div class="welcome-top-content">
+
+                            <div class="welcome-hero-icon">
+                                <i class="fa-solid fa-user-plus"></i>
+                            </div>
+
+                            <h2>Join Us!</h2>
+
+                            <p class="welcome-desc">
+                                Create your Staff Account to access assigned complaints,
+                                update grievance progress, communicate with students,
+                                and provide efficient issue resolution.
+                            </p>
+
+                            <p class="signup-alt-text">
+                                Already have an account?
+                            </p>
+
+                            <a href="staff_login.html" class="btn-signup-outline">
+                                Sign In
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </div>
+
+        </main>
+
+        <script src="/gms-api.js"></script>
+        <script>
+
+            const form = document.getElementById("gmsSignupForm");
+
+            const nameInput = document.getElementById("staffName");
+            const mobileInput = document.getElementById("staffMobile");
+            const emailInput = document.getElementById("staffEmail");
+            const departmentInput = document.getElementById("staffDepartment");
+            const passwordInput = document.getElementById("staffPassword");
+            const conformPasswordInput = document.getElementById("staffConformPassword");
+            const securityQuestion = document.getElementById("staffSecurityQuestion");
+            const securityAnswer = document.getElementById("staffSecurityAnswer");
+
+            const nameError = document.getElementById("nameError");
+            const mobileError = document.getElementById("mobileError");
+            const emailError = document.getElementById("emailError");
+            const departmentError = document.getElementById("departmentError");
+            const passwordError = document.getElementById("passwordError");
+            const conformPasswordError = document.getElementById("staffConformPasswordError");
+            const securityQuestionError = document.getElementById("securityQuestionError");
+            const securityAnswerError = document.getElementById("securityAnswerError");
+
+
+            // =====================================
+            // Show / Hide Password
+            // =====================================
+
+            document.getElementById("togglePassword").addEventListener("click", function(){
+
+                const icon=this.querySelector("i");
+
+                if(passwordInput.type==="password"){
+
+                    passwordInput.type="text";
+                    icon.classList.replace("fa-eye","fa-eye-slash");
+
+                }else{
+
+                    passwordInput.type="password";
+                    icon.classList.replace("fa-eye-slash","fa-eye");
+
+                }
+
+            });
+
+            document.getElementById("togglestaffConformPassword").addEventListener("click", function(){
+
+                const icon=this.querySelector("i");
+
+                if(conformPasswordInput.type==="password"){
+
+                    conformPasswordInput.type="text";
+                    icon.classList.replace("fa-eye","fa-eye-slash");
+
+                }else{
+
+                    conformPasswordInput.type="password";
+                    icon.classList.replace("fa-eye-slash","fa-eye");
+
+                }
+
+            });
+
+
+            // =====================================
+            // Validation Functions
+            // =====================================
+
+            function isValidName(name){
+
+                name=name.trim();
+
+                const words=name.split(/\s+/);
+
+                return words.length>=2 &&
+                    words.length<=5 &&
+                    /^[A-Za-z ]+$/.test(name);
+
+            }
+
+            function isValidIndianMobile(mobile){
+
+                return /^[6-9]\d{9}$/.test(mobile);
+
+            }
+
+            function isValidEmail(email){
+
+                return /^[a-z0-9._%+-]+@gmail\.com$/.test(email);
+
+            }
+
+
+            // =====================================
+            // Remove Invalid Characters
+            // =====================================
+
+            nameInput.addEventListener("input",function(){
+
+                nameError.innerHTML="";
+
+                this.value=this.value
+                    .replace(/[^A-Za-z ]/g,"")
+                    .replace(/\s+/g," ");
+
+            });
+
+            mobileInput.addEventListener("input",function(){
+
+                mobileError.innerHTML="";
+
+                this.value=this.value.replace(/\D/g,"");
+
+            });
+
+            emailInput.addEventListener("input",function(){
+
+                emailError.innerHTML="";
+
+                this.value=this.value
+                    .replace(/\s/g,"")
+                    .toLowerCase();
+
+            });
+
+            departmentInput.addEventListener("change",function(){
+
+                departmentError.innerHTML="";
+
+            });
+
+            passwordInput.addEventListener("input",function(){
+
+                passwordError.innerHTML="";
+
+                this.value=this.value.replace(/\s/g,"");
+
+            });
+
+            conformPasswordInput.addEventListener("input",function(){
+
+                conformPasswordError.innerHTML="";
+
+                this.value=this.value.replace(/\s/g,"");
+
+            });
+
+            securityQuestion.addEventListener("change", function () {
+
+                securityQuestionError.innerHTML = "";
+                securityQuestionError.classList.remove("show");
+            });
+
+            securityAnswer.addEventListener("input", function () {
+
+                securityAnswerError.innerHTML = "";
+                securityAnswerError.classList.remove("show");
+                this.value = this.value.replace(/\s+/g, " ");
+
+            });
+
+
+            // =====================================
+            // Scroll To Error
+            // =====================================
+
+            function scrollToError(element){
+
+                element.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+
+                element.focus();
+
+            }
+
+
+            // =====================================
+            // Form Validation
+            // =====================================
+
+            form.addEventListener("submit",function(e){
+
+                e.preventDefault();
+
+                nameError.innerHTML="";
+                mobileError.innerHTML="";
+                emailError.innerHTML="";
+                departmentError.innerHTML="";
+                passwordError.innerHTML="";
+                conformPasswordError.innerHTML="";
+                securityQuestionError.innerHTML = "";
+                securityAnswerError.innerHTML = "";
+
+                let valid=true;
+
+                const name=nameInput.value.trim();
+                const mobile=mobileInput.value.trim();
+                const email=emailInput.value.trim().toLowerCase();
+                const department=departmentInput.value;
+                const password=passwordInput.value.trim();
+                const conformPassword=conformPasswordInput.value.trim();
+                const question = securityQuestion.value;
+                const answer = securityAnswer.value.trim();
+
+
+                // ===============================
+                // Name
+                // ===============================
+
+                if(name===""){
+
+                    nameError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Full Name is required.';
+                    valid=false;
+
+                }else if(!isValidName(name)){
+
+                    nameError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Name must contain 2 to 5 words and only letters.';
+                    valid=false;
+
+                }
+
+
+                // ===============================
+                // Mobile
+                // ===============================
+
+                if(mobile===""){
+
+                    mobileError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Mobile Number is required.';
+                    valid=false;
+
+                }else if(!isValidIndianMobile(mobile)){
+
+                    mobileError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Enter a valid 10-digit mobile number.';
+                    valid=false;
+
+                }
+
+
+                // ===============================
+                // Email
+                // ===============================
+
+                if(email===""){
+
+                    emailError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Email is required.';
+                    valid=false;
+
+                }else if(!isValidEmail(email)){
+
+                    emailError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Enter a valid Gmail address.';
+                    valid=false;
+
+                }
+
+
+                // ===============================
+                // Department
+                // ===============================
+
+                if(department===""){
+
+                    departmentError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Please select a department.';
+                    valid=false;
+
+                }
+
+
+                // ===============================
+                // Password
+                // ===============================
+
+                if(password===""){
+
+                    passwordError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Password is required.';
+                    valid=false;
+
+                }else if(password.length<6){
+
+                    passwordError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Password must be at least 6 characters.';
+                    valid=false;
+
+                }
+
+
+                // ===============================
+                // conform Password
+                // ===============================
+
+                if(conformPassword===""){
+
+                    conformPasswordError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Conform Password is required.';
+                    valid=false;
+
+                }else if(password!==conformPassword){
+
+                    conformPasswordError.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Passwords do not match.';
+                    valid=false;
+
+                }
+
+                // ===============================
+                // Security Question
+                // ===============================
+
+                if (question === "") {
+
+                    securityQuestionError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Please select a security question.';
+                    valid = false;
+
+                }
+
+                // ===============================
+                // Security Answer
+                // ===============================
+
+                if (answer === "") {
+
+                    securityAnswerError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Security Answer is required.';
+                    valid = false;
+
+                }
+
+                // ===============================
+                // Submit
+                // ===============================
+
+                if (valid) {
+
+                    GMS.post("/api/auth/staff/signup", GMS.formData(form)).then(function (data) {
+                        alert(data.message || "Request sent.");
+                        GMS.go(data.redirect || "/HTML/STAFF/staff_login.html");
+                    }).catch(function (error) {
+                        alert(error.message);
+                    });
+
+                } else {
+
+                    if (nameError.innerHTML !== "") {
+
+                        scrollToError(nameInput);
+
+                    } else if (mobileError.innerHTML !== "") {
+
+                        scrollToError(mobileInput);
+
+                    } else if (emailError.innerHTML !== "") {
+
+                        scrollToError(emailInput);
+
+                    } else if (departmentError.innerHTML !== "") {
+
+                        scrollToError(departmentInput);
+
+                    } else if (passwordError.innerHTML !== "") {
+
+                        scrollToError(passwordInput);
+
+                    } else if (conformPasswordError.innerHTML !== "") {
+
+                        scrollToError(conformPasswordInput);
+
+                    } else if (securityQuestionError.innerHTML !== "") {
+
+                        scrollToError(securityQuestion);
+
+                    } else if (securityAnswerError.innerHTML !== "") {
+
+                        scrollToError(securityAnswer);
+
+                    }
+
+                }
+
+            });
+
+
+            // =====================================
+            // Success / Error Popup
+            // =====================================
+
+            window.onload = function () {
+
+                const params = new URLSearchParams(window.location.search);
+
+                if (params.has("error")) {
+
+                    const error = params.get("error");
+
+                    if (error === "Email Already Exists") {
+
+                        emailError.innerHTML ='<i class="fa-solid fa-circle-exclamation"></i> ' + error;
+                        scrollToError(emailInput);
+
+                    } else if (error === "Mobile Already Exists") {
+
+                        mobileError.innerHTML ='<i class="fa-solid fa-circle-exclamation"></i> ' + error;
+                        scrollToError(mobileInput);
+
+                    } else {
+
+                        alert(error);
+
+                    }
+
+                }
+
+                if (params.has("success")) {
+
+                    alert(params.get("success"));
+
+                }
+
+            };
+
+        </script>
+
+    </body>
+
+</html>

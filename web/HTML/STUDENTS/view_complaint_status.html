@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>View Complaint Status - GMS</title>
+
+        <link rel="stylesheet" href="../../CSS/style.css">
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </head>
+
+    <body>
+
+        <div class="admin-container">
+
+            <aside class="sidebar">
+                <div class="sidebar-brand">
+                    <i class="fa-solid fa-user-graduate"></i>
+                    <span>GMS Students</span>
+                </div>
+
+                <ul class="sidebar-menu">
+                    <li class="sidebar-item">
+                        <a href="student_dashboard.html">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="raise_complaint.html">
+                            <i class="fa-solid fa-file-circle-plus"></i>
+                            <span>Raise Complaint</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item active">
+                        <a href="view_complaint_status.html">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span>View Complaint Status</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="feedback.html">
+                            <i class="fa-solid fa-comment"></i>
+                            <span>Feedback</span>
+                        </a>
+                    </li>
+
+                </ul>
+            </aside>    
+
+            <nav class="navbar">
+
+                <div class="navbar-title">
+                    <h2>Student Panel</h2>
+                </div>
+
+                <div class="navbar-right">
+
+                    <div class="navbar-search">
+                        <input type="text" id="studentSearchInput" placeholder="Search complaints...">
+                    </div>
+
+                    <div class="navbar-profile-container">
+
+                        <div class="navbar-profile" id="profileTrigger">
+                            <i class="fa-solid fa-circle-user profile-icon"></i>
+                            <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                        </div>
+
+                        <div class="profile-dropdown" id="profileDropdown">
+
+                            <div class="dropdown-header">
+                                <h4 id="studentName"></h4>
+                                <span class="dropdown-role">Student</span>
+                            </div>
+
+                            <div class="dropdown-body">
+                                <div class="info-item">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <span id="studentMobile"></span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-envelope"></i>
+                                    <span id="studentEmail"></span>
+                                </div>
+                            </div>
+
+                            <hr class="dropdown-divider">
+
+                            <ul class="dropdown-menu-links">
+                                <li>
+                                    <a href="student_change_password.html">
+                                        <i class="fa-solid fa-lock"></i>
+                                        <span>Change Password</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="../../Home.html" class="logout-link">
+                                        <i class="fa-solid fa-right-from-bracket"></i>
+                                        <span>Logout</span>
+                                    </a>
+                                </li>
+                            </ul>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </nav>
+
+            <main class="main-content">
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div>
+                        <h2>Assigned Complaints Management</h2>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">
+                            Monitor, filter, and update student grievances assigned to your queue.
+                        </p>
+                    </div>
+
+                    <button type="button" id="loadDataBtn" class="btn btn-assign">
+                        <i class="fa-solid fa-rotate"></i> Load Data
+                    </button>
+                </div>
+
+                <div class="table-container">
+
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Complaint ID</th>
+                                <th>Category</th>
+                                <th>Description</th>
+                                <th>Assigned Staff</th>
+                                <th>Last Updated</th>
+                                <th>Status</th>
+                                <th>Type</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="myComplaints">
+
+                        </tbody>
+
+                    </table>
+
+                    <div id="timelinePanel" style="display:none;margin-top:20px;">
+                        <h3 id="timelineTitle"></h3>
+                        <p id="timelineStatus" style="display:none;"></p>
+                        <ol class="timeline" id="timelineList"></ol>
+                    </div>
+
+                </div>
+
+                <div class="pagination">
+
+                    <button id="prevBtn" class="btn btn-prev">
+                        << Prev
+                    </button>
+
+                    <span id="pageInfo"></span>
+
+                    <button id="nextBtn" class="btn btn-next">
+                        Next >>
+                    </button>
+
+                </div>
+
+            </main>
+
+        </div>
+
+        <script src="/gms-api.js"></script>
+        <script>
+
+            document.addEventListener("DOMContentLoaded", function () {
+
+                // =====================================
+                // Pagination Variables
+                // =====================================
+
+                let allMyComplaints = [];
+                let originalMyComplaints = [];
+                let currentPage = 1;
+                const rowsPerPage = 6;
+
+                // =====================================
+                // Profile Dropdown
+                // =====================================
+
+                const profile = document.getElementById("profileTrigger");
+                const dropdown = document.getElementById("profileDropdown");
+
+                if(profile && dropdown){
+
+                    profile.addEventListener("click",function(e){
+
+                        e.stopPropagation();
+                        profile.classList.toggle("active");
+                        dropdown.classList.toggle("show");
+
+                    });
+
+                    document.addEventListener("click",function(e){
+
+                        if(!profile.contains(e.target) &&
+                        !dropdown.contains(e.target)){
+
+                            profile.classList.remove("active");
+                            dropdown.classList.remove("show");
+
+                        }
+
+                    });
+
+                }
+
+                // =====================================
+                // Student Profile
+                // =====================================
+
+                fetch("/api/student/profile")
+                .then(res=>res.json())
+                .then(data=>{
+
+                    document.getElementById("studentName").textContent=data.studentName;
+                    document.getElementById("studentMobile").textContent=data.mobile;
+                    document.getElementById("studentEmail").innerHTML=
+                        data.email.replace("@","@<wbr>");
+
+                });
+
+                // =====================================
+                // Render Table
+                // =====================================
+
+                function wrapText(text, limit) {
+
+                    let words = text.split(" ");
+                    let line = "";
+                    let result = "";
+
+                    words.forEach(function(word){
+
+                        if((line + word).length > limit){
+
+                            result += line + "<br>";
+                            line = word + " ";
+
+                        }else{
+
+                            line += word + " ";
+
+                        }
+
+                    });
+
+                    return result + line;
+
+                }
+
+                function escapeText(value){
+                    return String(value ?? "").replace(/[&<>"']/g, function(ch){
+                        return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch];
+                    });
+                }
+
+                function analysisTitle(analysis){
+                    const issues = Array.isArray(analysis.issues) ? analysis.issues : [];
+                    const lines = [analysis.verdict || ""];
+                    issues.forEach(function(issue, index){
+                        lines.push((index + 1) + ". " + (issue.category || "Other") + " (" + (issue.priority || "Medium") + "): " + (issue.text || ""));
+                    });
+                    return escapeText(lines.filter(Boolean).join("\n"));
+                }
+
+                // Opens the case timeline for one complaint. Text is set with textContent, never as HTML.
+                async function openTimeline(complaintId){
+                    const panel=document.getElementById("timelinePanel");
+                    const list=document.getElementById("timelineList");
+                    const status=document.getElementById("timelineStatus");
+                    document.getElementById("timelineTitle").textContent="Case timeline: "+complaintId;
+                    list.innerHTML="";
+                    status.style.display="none";
+                    panel.style.display="block";
+                    try{
+                        const data=await GMS.get("/api/student/complaints/"+encodeURIComponent(complaintId)+"/timeline");
+                        if(!data.events.length){
+                            GMS.notify(status,"No activity has been recorded for this complaint yet.",false);
+                            return;
+                        }
+                        data.events.forEach(function(ev){
+                            const li=document.createElement("li");
+                            const text=document.createElement("span");
+                            text.textContent=ev.message;
+                            const meta=document.createElement("span");
+                            meta.className="timeline-meta";
+                            meta.textContent=new Date(ev.at).toLocaleString("en-IN");
+                            li.appendChild(text);
+                            li.appendChild(meta);
+                            list.appendChild(li);
+                        });
+                    }catch(err){
+                        GMS.notify(status,err.message,true);
+                    }
+                }
+
+                document.getElementById("myComplaints").addEventListener("click",function(e){
+                    const btn=e.target.closest(".timeline-open");
+                    if(btn) openTimeline(btn.dataset.id);
+                });
+
+                function renderTable(){
+
+                    const tbody=document.getElementById("myComplaints");
+
+                    tbody.innerHTML="";
+
+                    const start=(currentPage-1)*rowsPerPage;
+                    const end=start+rowsPerPage;
+
+                    const pageData=allMyComplaints.slice(start,end);
+
+                    if(pageData.length===0){
+
+                        tbody.innerHTML=`
+                        <tr>
+                            <td colspan="7" style="text-align:center;">
+                                No Complaints Found
+                            </td>
+                        </tr>
+                        `;
+
+                    }else{
+
+                        pageData.forEach(function(c){
+
+                            let badge="";
+                            let description = wrapText(c.description || "", 50);
+
+                            switch((c.status||"").toLowerCase()){
+
+                                case "pending":
+                                    badge="badge-pending";
+                                    break;
+
+                                case "assigned":
+                                    badge="badge-assigned";
+                                    break;
+
+                                case "in progress":
+                                    badge="badge-in-progress";
+                                    break;
+
+                                case "resolved":
+                                    badge="badge-resolved";
+                                    break;    
+
+                                default:
+                                    badge="";
+
+                            }
+
+                            const verdictTitle = c.aiAnalysis ? analysisTitle(c.aiAnalysis) : "";
+                            const verdictIcon = verdictTitle
+                                ? `<i class="fa-solid fa-robot" title="${verdictTitle}" style="margin-left:6px;color:#2563eb;"></i>`
+                                : "";
+
+                            tbody.innerHTML+=`
+
+                            <tr>
+
+                                <td><button type="button" class="timeline-open" data-id="${c.complaintId}" style="background:none;border:0;padding:0;color:#2563eb;font:inherit;cursor:pointer;text-decoration:underline;">${c.complaintId}</button>${verdictIcon}</td>
+
+                                <td>${c.category}</td>
+
+                                <td>${description}</td>
+
+                                <td>${c.assignedStaff}</td>
+
+                                <td>${c.date}</td>
+
+                                <td>
+                                    <span class="badge ${badge}">
+                                        ${c.status}
+                                    </span>
+                                    ${c.overdue ? '<span class="badge badge-overdue" style="margin-left:4px;">Overdue</span>' : ""}
+                                </td>
+
+                                <td>${c.type}</td>
+
+                            </tr>
+
+                            `;
+
+                        });
+
+                    }
+
+                    let totalPages=Math.ceil(allMyComplaints.length/rowsPerPage);
+
+                    if(totalPages===0){
+                        totalPages=1;
+                    }
+
+                    document.getElementById("pageInfo").innerHTML=
+                        "Page "+currentPage+" of "+totalPages;
+
+                    document.getElementById("prevBtn").disabled=
+                        currentPage===1;
+
+                    document.getElementById("nextBtn").disabled=
+                        currentPage===totalPages;
+
+                }
+
+                // =====================================
+                // Load Complaints
+                // =====================================
+
+                function loadComplaints(){
+
+                    fetch("/api/student/complaints")
+
+                    .then(response=>{
+
+                        return response.json().then(body=>{
+
+                            if(!response.ok){
+
+                                throw new Error(body.error || "Unable to fetch complaints. Sign in again from the login page.");
+
+                            }
+
+                            return body;
+
+                        });
+
+                    })
+
+                    .then(data=>{
+
+                        if(data.error){
+
+                            throw new Error(data.error);
+
+                        }
+
+                        originalMyComplaints=data.complaints;
+                        allMyComplaints=[...originalMyComplaints];
+
+                        currentPage=1;
+
+                        renderTable();
+
+                    })
+
+                    .catch(error=>{
+
+                        console.error(error);
+
+                        document.getElementById("myComplaints").innerHTML=`
+
+                        <tr>
+
+                            <td colspan="7"
+                                style="text-align:center;color:red;">
+
+                                ${error.message || "Failed to load complaints."}
+
+                            </td>
+
+                        </tr>
+
+                        `;
+
+                    });
+
+                }
+
+                // =====================================
+                // Pagination
+                // =====================================
+
+                document.getElementById("nextBtn").addEventListener("click",function(){
+
+                    const totalPages=Math.ceil(allMyComplaints.length/rowsPerPage);
+
+                    if(currentPage<totalPages){
+
+                        currentPage++;
+                        renderTable();
+
+                    }
+
+                });
+
+                document.getElementById("prevBtn").addEventListener("click",function(){
+
+                    if(currentPage>1){
+
+                        currentPage--;
+                        renderTable();
+
+                    }
+
+                });
+
+                // =====================================
+                // Search Complaint
+                // =====================================
+
+                document.getElementById("studentSearchInput")
+                .addEventListener("keyup",function(){
+
+                    const keyword=this.value.trim().toLowerCase();
+
+                    if(keyword===""){
+
+                        allMyComplaints=[...originalMyComplaints];
+
+                    }else{
+
+                        allMyComplaints=originalMyComplaints.filter(function(c){
+
+                            return (
+
+                                c.complaintId.toLowerCase().includes(keyword) ||
+
+                                c.category.toLowerCase().includes(keyword) ||
+
+                                c.description.toLowerCase().includes(keyword) ||
+
+                                c.assignedStaff.toLowerCase().includes(keyword) ||
+
+                                c.date.toLowerCase().includes(keyword) ||
+
+                                c.status.toLowerCase().includes(keyword) ||
+
+                                c.type.toLowerCase().includes(keyword)
+
+                            );
+
+                        });
+
+                    }
+
+                    currentPage=1;
+
+                    renderTable();
+
+                });
+
+                // =====================================
+                // Load Data Button
+                // =====================================
+
+                const loadBtn = document.getElementById("loadDataBtn");
+
+                if(loadBtn){
+
+                    loadBtn.addEventListener("click",function(){
+
+                        loadBtn.disabled = true;
+
+                        loadBtn.innerHTML =
+                            '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
+
+                        // Sirf complaints reload karega
+                        loadComplaints();
+
+                        setTimeout(function(){
+
+                            loadBtn.disabled = false;
+
+                            loadBtn.innerHTML =
+                                '<i class="fa-solid fa-rotate"></i> Load Data';
+
+                        },500);
+
+                    });
+
+                }
+
+                // =====================================
+                // Initial Load
+                // =====================================
+
+                loadComplaints();
+
+                setInterval(loadComplaints, 15000);
+
+                // =====================================
+                // Success / Error Popup
+                // =====================================
+
+                const params = new URLSearchParams(window.location.search);
+
+                if(params.has("success")){
+
+                    alert(params.get("success"));
+                    window.history.replaceState({}, document.title, window.location.pathname);
+
+                }
+
+                if(params.has("error")){
+
+                    alert(params.get("error"));
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    
+                }
+
+            });
+
+        </script>
+
+    </body>
+
+</html>

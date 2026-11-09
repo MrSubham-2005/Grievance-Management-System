@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Admin Dashboard - GMS</title>
+
+        <link rel="stylesheet" href="../../CSS/style.css">
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </head>
+
+    <body class="hide-search-page">
+
+        <div class="admin-container">
+
+            <aside class="sidebar">
+                <div class="sidebar-brand">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>GMS Admin</span>
+                </div>
+
+                <ul class="sidebar-menu">
+                    <li class="sidebar-item active">
+                        <a href="admin_dashboard.html">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="view_complaints.html">
+                            <i class="fa-solid fa-list-check"></i>
+                            <span>View Complaints</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="assign_complaint.html">
+                            <i class="fa-solid fa-user-check"></i>
+                            <span>Assign Complaint</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="students.html">
+                            <i class="fa-solid fa-graduation-cap"></i>
+                            <span>Students</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="staff.html">
+                            <i class="fa-solid fa-user-tie"></i>
+                            <span>Staff</span>
+                        </a>
+                    </li>
+                </ul>
+            </aside>
+
+            <nav class="navbar">
+
+                <div class="navbar-title">
+                    <h2>Admin Panel</h2>
+                </div>
+
+                <div class="navbar-right">
+
+                    <div class="navbar-search">
+                        <input type="text" id="adminSearchInput" placeholder="Search complaints, students...">
+                    </div>
+
+                    <div class="navbar-profile-container">
+
+                        <div class="navbar-profile" id="profileTrigger">
+                            <i class="fa-solid fa-circle-user profile-icon"></i>
+                            <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                        </div>
+
+                        <div class="profile-dropdown" id="profileDropdown">
+
+                            <div class="dropdown-header">
+                                <h4 id="adminName"></h4>
+                                <span class="dropdown-role">Super Admin</span>
+                            </div>
+
+                            <div class="dropdown-body">
+                                <div class="info-item">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <span id="adminMobile"></span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-envelope"></i>
+                                    <span id="adminEmail"></span>
+                                </div>
+                            </div>
+
+                            <hr class="dropdown-divider">
+
+                            <ul class="dropdown-menu-links">
+
+                                <li>
+                                    <a href="admin_change_password.html">
+                                        <i class="fa-solid fa-lock"></i>
+                                        <span>Change Password</span>
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a href="../../Home.html" class="logout-link">
+                                        <i class="fa-solid fa-right-from-bracket"></i>
+                                        <span>Logout</span>
+                                    </a>
+                                </li>
+
+                            </ul>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </nav>
+
+            <main class="main-content">
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div>
+                        <h2>Welcome Back, <span id="welcomeAdminName"></span>!</h2>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">
+                            Use the dashboard to monitor complaints, manage users, and review system activity.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+
+                    <div class="card card-total">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-file-circle-exclamation"></i>
+                        </div>
+
+                        <div class="card-content">
+                            <span class="card-title">Total Complaints</span>
+                            <span class="card-value" id="totalComplaints"></span>
+                        </div>
+                    </div>
+
+                    <div class="card card-pending">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-hourglass-half"></i>
+                        </div>
+
+                        <div class="card-content">
+                            <span class="card-title">Pending</span>
+                            <span class="card-value" id="pendingComplaints"></span>
+                        </div>
+                    </div>
+
+                    <div class="card card-assigned">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-clipboard-check"></i>
+                        </div>
+
+                        <div class="card-content">
+                            <span class="card-title">Assigned</span>
+                            <span class="card-value" id="assignedComplaints"></span>
+                        </div>
+                    </div>
+
+                    <div class="card card-progress">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-spinner"></i>
+                        </div>
+
+                        <div class="card-content">
+                            <span class="card-title">In Progress</span>
+                            <span class="card-value" id="inProgressComplaints"></span>
+                        </div>
+                    </div>
+
+                    <div class="card card-resolved">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+
+                        <div class="card-content">
+                            <span class="card-title">Resolved</span>
+                            <span class="card-value" id="resolvedComplaints"></span>
+                        </div>
+                    </div>
+
+                    <div class="card card-student">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-user-graduate"></i>
+                        </div>
+
+                        <div class="card-content">
+                            <span class="card-title">Total Students</span>
+                            <span class="card-value" id="totalStudents"></span>
+                        </div>
+                    </div>
+
+                    <div class="card card-staff">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-user-tie"></i>
+                        </div>
+
+                        <div class="card-content">
+                            <span class="card-title">Total Staff</span>
+                            <span class="card-value" id="totalStaff"></span>
+                        </div>
+                    </div>
+
+                    <div class="card card-pending-staff">
+                        <div class="card-icon">
+                            <i class="fa-solid fa-user-clock"></i>
+                        </div>
+
+                        <div class="card-content">
+                            <span class="card-title">Pending Staff</span>
+                            <span class="card-value" id="pendingStaff"></span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">
+                        <h2>Recent Complaints</h2>
+                    </div>
+                    <table class="custom-table">
+
+                        <thead>
+                            <tr>
+                                <th>Complaint ID</th>
+                                <th>Student ID</th>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Description</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="recentComplaintsBody">
+                            
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </main>
+
+        </div>
+
+        <script>
+
+            document.addEventListener("DOMContentLoaded", function () {
+
+                // ===============================
+                // Profile Dropdown Toggle
+                // ===============================
+
+                const profile = document.getElementById("profileTrigger");
+                const dropdown = document.getElementById("profileDropdown");
+
+                if (profile && dropdown) {
+
+                    profile.addEventListener("click", function (e) {
+                        e.stopPropagation();
+                        dropdown.classList.toggle("show");
+                        profile.classList.toggle("active");
+                    });
+
+                    document.addEventListener("click", function (e) {
+                        if (!profile.contains(e.target) && !dropdown.contains(e.target)) {
+                            dropdown.classList.remove("show");
+                            profile.classList.remove("active");
+                        }
+                    });
+
+                }
+                
+
+                // ===============================
+                // Admin Profile
+                // ===============================
+
+                fetch("/api/admin/profile")
+                .then(res => res.json())
+                .then(data => {
+
+                    document.getElementById("adminName").textContent = data.adminName;
+                    document.getElementById("welcomeAdminName").textContent = data.adminName.split(" ")[0];
+                    document.getElementById("adminMobile").textContent = data.mobile;
+                    document.getElementById("adminEmail").innerHTML = data.email.replace("@","@<wbr>");
+
+                });
+
+
+                // =====================================
+                // Wrap Description
+                // =====================================
+
+                function wrapText(text, limit) {
+
+                    let words = text.split(" ");
+                    let line = "";
+                    let result = "";
+
+                    words.forEach(function(word){
+
+                        if((line + word).length > limit){
+
+                            result += line + "<br>";
+                            line = word + " ";
+
+                        }else{
+
+                            line += word + " ";
+
+                        }
+
+                    });
+
+                    return result + line;
+
+                }
+
+
+                // ===============================
+                // Fetch Dashboard Data
+                // ===============================
+
+                function loadDashboard() {
+                    fetch("/api/admin/dashboard")
+    
+                    .then(response => {
+    
+                        if (!response.ok) {
+                            throw new Error("Unable to fetch dashboard data.");
+                        }
+    
+                        return response.json();
+    
+                    })
+    
+                    .then(data => {
+    
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+    
+                        // Dashboard Cards
+    
+                        document.getElementById("totalComplaints").textContent =
+                            data.totalComplaints || 0;
+    
+                        document.getElementById("pendingComplaints").textContent =
+                            data.pendingComplaints || 0;
+    
+                        document.getElementById("assignedComplaints").textContent =
+                            data.assignedComplaints || 0;
+    
+                        document.getElementById("inProgressComplaints").textContent =
+                            data.inProgressComplaints || 0;
+    
+                        document.getElementById("resolvedComplaints").textContent =
+                            data.resolvedComplaints || 0;
+    
+                        document.getElementById("totalStudents").textContent =
+                            data.totalStudents || 0;
+    
+                        document.getElementById("totalStaff").textContent =
+                            data.totalStaff || 0;
+    
+                        document.getElementById("pendingStaff").textContent =
+                            data.pendingStaff || 0;
+    
+    
+                        // Recent Complaints
+    
+                        const tbody = document.getElementById("recentComplaintsBody");
+    
+                        tbody.innerHTML = "";
+    
+                        if (data.recentComplaints && data.recentComplaints.length > 0) {
+    
+                            data.recentComplaints.forEach(function (complaint) {
+    
+                                let badgeClass = "";
+    
+                                switch ((complaint.status || "").toLowerCase()) {
+    
+                                    case "pending":
+                                        badgeClass = "badge-pending";
+                                        break;
+    
+                                    case "assigned":
+                                        badgeClass = "badge-assigned";
+                                        break;
+    
+                                    case "in progress":
+                                        badgeClass = "badge-in-progress";
+                                        break;
+    
+                                    case "resolved":
+                                        badgeClass = "badge-resolved";
+                                        break;
+    
+                                    default:
+                                        badgeClass = "";
+                                } 
+    
+                                tbody.innerHTML += `
+                                    <tr>
+                                        <td>${complaint.complaintId}</td>
+                                        <td>${complaint.studentId}</td>
+                                        <td>${complaint.studentName}</td>
+                                        <td>${complaint.category}</td>
+                                        <td>${wrapText(complaint.description || "", 50)}</td>
+                                        <td>${complaint.date}</td>
+                                        <td>
+                                            <span class="badge ${badgeClass}">
+                                                ${complaint.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                `;
+    
+                            });
+    
+                        } else {
+    
+                            tbody.innerHTML = `
+                                <tr>
+                                    <td colspan="7" style="text-align:center;">
+                                        No complaints found.
+                                    </td>
+                                </tr>
+                            `;
+    
+                        }
+    
+                    })
+    
+                    .catch(error => {
+    
+                        console.error(error);
+    
+                        document.getElementById("totalComplaints").textContent = "0";
+                        document.getElementById("pendingComplaints").textContent = "0";
+                        document.getElementById("assignedComplaints").textContent = "0";
+                        document.getElementById("inProgressComplaints").textContent = "0";
+                        document.getElementById("resolvedComplaints").textContent = "0";
+                        document.getElementById("totalStudents").textContent = "0";
+                        document.getElementById("totalStaff").textContent = "0";
+                        document.getElementById("pendingStaff").textContent = "0";
+    
+                    });
+                }
+
+                loadDashboard();
+                setInterval(loadDashboard, 15000);
+
+                // =====================================
+                // Success / Error Popup
+                // =====================================
+
+                const params=new URLSearchParams(window.location.search);
+
+                if(params.has("success")){
+
+                    alert(params.get("success"));
+
+                }
+
+                if(params.has("error")){
+
+                    alert(params.get("error"));
+
+                }
+
+                window.history.replaceState({}, document.title, window.location.pathname);
+
+            });
+
+        </script>
+
+    <script src="/gms-api.js"></script>
+    </body>
+
+</html>

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <title>Student Login - Grievance Management System</title>
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+        <link rel="stylesheet" href="../../CSS/student_staff_login.css">
+    </head>
+
+    <body>
+
+        <main class="login-wrapper">
+            
+            <div class="login-container">
+                <section class="welcome-banner-section">
+
+                    <div class="bg-shape shape-1"></div>
+                    <div class="bg-shape shape-2"></div>
+                    <div class="bg-shape shape-3"></div>
+
+                    <div class="welcome-content-wrapper">
+
+                        <div class="welcome-top-content">
+
+                            <div class="welcome-hero-icon">
+                                <i class="fa-solid fa-graduation-cap"></i>
+                            </div>
+
+                            <h2>Welcome Back!</h2>
+
+                            <p class="welcome-desc">
+                                Login to your Grievance Management System and easily
+                                raise complaints, track complaint status,
+                                receive staff updates, and share your valuable
+                                feedback.
+                            </p>
+
+                            <p class="signup-alt-text">
+                                Don't have an account?
+                            </p>
+
+                            <a href="student_signup.html" class="btn-signup-outline">
+                                Sign Up
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+                <section class="login-form-section">
+
+                    <header class="form-header">
+
+                        <h1>Student Login</h1>
+
+                        <p class="subtitle">
+                            Sign in to access your Grievance Management System.
+                        </p>
+
+                    </header>
+
+                    <p id="signinNotice" role="alert" style="display:none;margin:0 0 16px;padding:10px 12px;border-radius:8px;background:#fff4e5;color:#8a4b00;font-size:14px;">You need to sign in before you can use this page.</p>
+
+                    <form id="gmsLoginForm" action="/api/auth/student/login" method="POST" novalidate>
+
+                        <div class="input-field-group">
+
+                            <div class="input-control-wrapper">
+                                <i class="fa-solid fa-user input-icon"></i>
+                                <input type="text" id="studentEmail" name="studentEmail"placeholder=" "required>
+                                <label for="studentEmail" class="floating-label"> Mobile No / Email </label>
+                            </div>
+                            <span class="validation-msg" id="emailError"></span>
+
+                        </div>
+
+                        <div class="input-field-group">
+
+                            <div class="input-control-wrapper">
+                                <i class="fa-solid fa-lock input-icon"></i>
+                                <input type="password" id="studentPassword" name="studentPassword" placeholder=" " required>
+                                <label for="studentPassword" class="floating-label"> Password </label>
+
+                                <button type="button" id="togglePasswordVisibility" class="btn-toggle-password">
+                                    <i class="fa-regular fa-eye"></i>
+                                </button>
+                            </div>
+                            <span class="validation-msg" id="passwordError"></span>
+
+                        </div>
+
+                        <button type="submit" class="btn-login">
+                            Login
+                        </button>
+
+                        <div class="form-options">
+                            <a href="student_forgot_password.html" class="forgot-pwd-link">
+                                Forgot Password?
+                            </a>
+                        </div>
+
+                    </form>
+
+                </section>
+
+            </div>
+
+        </main>
+
+        <script src="/gms-api.js"></script>
+        <script>
+            const form = document.getElementById("gmsLoginForm");
+
+            const emailInput = document.getElementById("studentEmail");
+            const passwordInput = document.getElementById("studentPassword");
+
+            const emailError = document.getElementById("emailError");
+            const passwordError = document.getElementById("passwordError");
+
+
+            // Password Show / Hide
+            const togglePassword = document.getElementById("togglePasswordVisibility");
+            const eyeIcon = togglePassword.querySelector("i");
+
+            togglePassword.addEventListener("click", function () {
+
+                if (passwordInput.type === "password") {
+                    passwordInput.type = "text";
+                    eyeIcon.classList.remove("fa-eye");
+                    eyeIcon.classList.add("fa-eye-slash");
+                } else {
+                    passwordInput.type = "password";
+                    eyeIcon.classList.remove("fa-eye-slash");
+                    eyeIcon.classList.add("fa-eye");
+                }
+
+            });
+
+
+            // Gmail Validation
+
+            function isValidEmail(email) {
+                return /^[a-z0-9._%+-]+@gmail\.com$/.test(email);
+            }
+
+            // Indian Mobile Validation
+            
+            function isValidIndianMobile(mobile) {
+                return /^[6-9]\d{9}$/.test(mobile);
+            }
+
+            // Prevent Spaces
+
+            emailInput.addEventListener("input", function () {
+                emailError.innerHTML = "";
+                this.value = this.value.replace(/\s/g, "").toLowerCase();
+            });
+
+            passwordInput.addEventListener("input", function () {
+                passwordError.innerHTML = "";
+                this.value = this.value.replace(/\s/g, "");
+            });
+
+
+            // Login Validation
+
+            form.addEventListener("submit", function (e) {
+
+                e.preventDefault();
+
+                emailError.innerHTML = "";
+                passwordError.innerHTML = "";
+
+                let valid = true;
+
+                const mobileEmail = emailInput.value.trim().toLowerCase();
+                const password = passwordInput.value.trim();
+
+
+                // Mobile / Email Validation
+
+                if (mobileEmail === "") {
+                    emailError.innerHTML ='<i class="fa-solid fa-circle-exclamation"></i> Mobile Number or Email is required.';
+                    valid = false;
+                } else if (/^[0-9]+$/.test(mobileEmail)) {
+                    if (!isValidIndianMobile(mobileEmail)) {
+                        emailError.innerHTML ='<i class="fa-solid fa-circle-exclamation"></i> Enter a valid 10-digit Indian mobile number.';
+                        valid = false;
+                    }
+                } else {
+                    if (!isValidEmail(mobileEmail)) {
+                        emailError.innerHTML ='<i class="fa-solid fa-circle-exclamation"></i> Enter a valid Gmail address.';
+                        valid = false;
+                    }
+                }
+
+
+                // Password Validation
+
+                if (password === "") {
+
+                    passwordError.innerHTML ='<i class="fa-solid fa-circle-exclamation"></i> Password is required.';
+                    valid = false;
+
+                } else if (password.length < 6) {
+
+                    passwordError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Password must be at least 6 characters.';
+                    valid = false;
+
+                }
+
+
+                // Login Success
+
+                if (valid) {
+                    GMS.post("/api/auth/student/login", {
+                        studentEmail: emailInput.value.trim(),
+                        studentPassword: passwordInput.value
+                    }).then(function (data) {
+                        GMS.go(data.redirect);
+                    }).catch(function (error) {
+                        passwordError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> ' + error.message;
+                        passwordInput.value = "";
+                        passwordInput.focus();
+                    });
+                }
+
+            });
+
+            // ===============================
+            // Success / Error Popup
+            // ===============================
+
+            window.addEventListener("load", function () {
+
+                const params = new URLSearchParams(window.location.search);
+
+                // Popup for Invalid Mobile / Email
+                if (params.has("error")) {
+
+                    alert(decodeURIComponent(params.get("error")));
+
+                    // Clear fields after popup
+                    emailInput.value = "";
+                    passwordInput.value = "";
+                    emailInput.focus();
+
+                }
+
+                // Password error below password field
+                if (params.has("passwordError")) {
+
+                    passwordError.innerHTML =
+                        '<i class="fa-solid fa-circle-exclamation"></i> ' +
+                        decodeURIComponent(params.get("passwordError"));
+
+                    // Password field clear
+                    passwordInput.value = "";
+                    passwordInput.focus();
+
+                }
+
+                // Success Popup
+                if (params.has("success")) {
+
+                    alert(decodeURIComponent(params.get("success")));
+
+                }
+
+                window.history.replaceState({}, document.title, window.location.pathname);
+
+            });
+
+        </script>
+
+    <script>if(new URLSearchParams(window.location.search).get("reason")==="signin"){document.getElementById("signinNotice").style.display="block";}</script>
+</body>
+    
+</html>

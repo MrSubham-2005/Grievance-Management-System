@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Manage Students - GMS</title>
+
+        <!-- CSS -->
+        <link rel="stylesheet" href="../../CSS/style.css">
+
+        <!-- Icons -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </head>
+
+    <body>
+
+        <div class="admin-container">
+
+            <aside class="sidebar">
+                <div class="sidebar-brand">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>GMS Admin</span>
+                </div>
+
+                <ul class="sidebar-menu">
+                    <li class="sidebar-item">
+                        <a href="admin_dashboard.html">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="view_complaints.html">
+                            <i class="fa-solid fa-list-check"></i>
+                            <span>View Complaints</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="assign_complaint.html">
+                            <i class="fa-solid fa-user-check"></i>
+                            <span>Assign Complaint</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item active">
+                        <a href="students.html">
+                            <i class="fa-solid fa-graduation-cap"></i>
+                            <span>Students</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="staff.html">
+                            <i class="fa-solid fa-user-tie"></i>
+                            <span>Staff</span>
+                        </a>
+                    </li>
+                </ul>
+            </aside>
+
+            <nav class="navbar">
+
+                <div class="navbar-title">
+                    <h2>Admin Panel</h2>
+                </div>
+
+                <div class="navbar-right">
+
+                    <div class="navbar-search">
+                        <input type="text" id="adminSearchInput" placeholder="Search complaints, students...">
+                    </div>
+
+                    <div class="navbar-profile-container">
+
+                        <div class="navbar-profile" id="profileTrigger">
+                            <i class="fa-solid fa-circle-user profile-icon"></i>
+                            <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                        </div>
+
+                        <div class="profile-dropdown" id="profileDropdown">
+
+                            <div class="dropdown-header">
+                                <h4 id="adminName"></h4>
+                                <span class="dropdown-role">Super Admin</span>
+                            </div>
+
+                            <div class="dropdown-body">
+                                <div class="info-item">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <span id="adminMobile"></span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-envelope"></i>
+                                    <span id="adminEmail"></span>
+                                </div>
+                            </div>
+
+                            <hr class="dropdown-divider">
+
+                            <ul class="dropdown-menu-links">
+
+                                <li>
+                                    <a href="admin_change_password.html">
+                                        <i class="fa-solid fa-lock"></i>
+                                        <span>Change Password</span>
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a href="../../Home.html" class="logout-link">
+                                        <i class="fa-solid fa-right-from-bracket"></i>
+                                        <span>Logout</span>
+                                    </a>
+                                </li>
+
+                            </ul>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </nav>
+
+            <main class="main-content">
+
+                <!-- HEADER -->
+                <div style="margin-bottom: 1.5rem;">
+                    <h2>Manage Students</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">
+                        Activate or deactivate student accounts.
+                    </p>
+                </div>
+
+                <!-- TABLE -->
+                <div class="table-container">
+
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Mobile</th>
+                                <th>Email</th>
+                                <th>Total Complaint</th>
+                                <th>Pending</th>
+                                <th>Assigned</th>
+                                <th>In Progress</th>
+                                <th>Resolved</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="allStudentsData">
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <div class="pagination">
+
+                    <button id="prevBtn" class="btn btn-cancel">
+                        << Prev
+                    </button>
+
+                    <span id="pageInfo"></span>
+
+                    <button id="nextBtn" class="btn btn-assign">
+                        Next >>
+                    </button>
+
+                </div>
+
+            </main>
+
+        </div>
+
+        <script>
+
+            document.addEventListener("DOMContentLoaded", function () {
+
+                // =====================================
+                // Pagination Variables
+                // =====================================
+
+                let allStudents = [];
+                let originalStudents = [];
+                let currentPage = 1;
+                const rowsPerPage = 6;
+
+                // =====================================
+                // Profile Dropdown
+                // =====================================
+
+                const profile = document.getElementById("profileTrigger");
+                const dropdown = document.getElementById("profileDropdown");
+
+                profile.addEventListener("click", function (e) {
+
+                    e.stopPropagation();
+
+                    profile.classList.toggle("active");
+                    dropdown.classList.toggle("show");
+
+                });
+
+                document.addEventListener("click", function (e) {
+
+                    if (!profile.contains(e.target) &&
+                        !dropdown.contains(e.target)) {
+
+                        profile.classList.remove("active");
+                        dropdown.classList.remove("show");
+
+                    }
+
+                });
+
+                // =====================================
+                // Admin Profile
+                // =====================================
+
+                fetch("/api/admin/profile")
+                .then(res => res.json())
+                .then(data => {
+
+                    document.getElementById("adminName").textContent = data.adminName;
+                    document.getElementById("adminMobile").textContent = data.mobile;
+                    document.getElementById("adminEmail").innerHTML = data.email.replace("@","@<wbr>");
+
+                });
+
+                // =====================================
+                // Mobile Format
+                // =====================================
+
+                function formatMobile(mobile){
+
+                    if(!mobile) return "";
+
+                    return mobile.replace(
+                        /(\d{3})(\d{3})(\d{4})/,
+                        "$1-$2-$3"
+                    );
+
+                }
+
+                // =====================================
+                // Render Table
+                // =====================================
+
+                function renderTable(){
+
+                    const tbody = document.getElementById("allStudentsData");
+
+                    tbody.innerHTML = "";
+
+                    const start = (currentPage-1) * rowsPerPage;
+                    const end = start + rowsPerPage;
+
+                    const pageData = allStudents.slice(start,end);
+
+                    if(pageData.length===0){
+
+                        tbody.innerHTML=`
+                            <tr>
+
+                                <td colspan="11" style="text-align:center;">
+
+                                    No Students Found
+
+                                </td>
+
+                            </tr>
+                        `;
+
+                    }
+
+                    pageData.forEach(function(s){
+
+                        let badge="";
+                        let actionButton="";
+
+                        if((s.status||"").toLowerCase()=="active"){
+
+                            badge="badge-active";
+
+                            actionButton=`
+
+                            <form class="status-form" data-kind="student" method="POST">
+
+                                <input type="hidden"
+                                    name="student_id"
+                                    value="${s.studentId}">
+
+                                <button
+                                    type="submit"
+                                    name="action"
+                                    value="inactive"
+                                    class="btn btn-deactivate">
+
+                                    <i class="fa-solid fa-user-slash"></i>
+                                    Inactive
+
+                                </button>
+
+                            </form>
+
+                            `;
+
+                        }else{
+
+                            badge="badge-inactive";
+
+                            actionButton=`
+
+                            <form class="status-form" data-kind="student" method="POST">
+
+                                <input type="hidden"
+                                    name="student_id"
+                                    value="${s.studentId}">
+
+                                <button
+                                    type="submit"
+                                    name="action"
+                                    value="active"
+                                    class="btn btn-activate">
+
+                                    <i class="fa-solid fa-user-check"></i>
+                                    Active
+
+                                </button>
+
+                            </form>
+
+                            `;
+
+                        }
+
+                        tbody.innerHTML+=`
+
+                        <tr>
+
+                            <td>${s.studentId}</td>
+
+                            <td>${s.studentName}</td>
+
+                            <td>${formatMobile(s.mobile)}</td>
+
+                            <td>${s.email}</td>
+
+                            <td>${s.totalComplaint}</td>
+
+                            <td>${s.pending}</td>
+
+                            <td>${s.assigned}</td>
+
+                            <td>${s.inProgress}</td>
+
+                            <td>${s.resolved}</td>
+
+                            <td>
+
+                                <span class="badge ${badge}">
+                                    ${s.status}
+                                </span>
+
+                            </td>
+
+                            <td>
+
+                                ${actionButton}
+
+                            </td>
+
+                        </tr>
+
+                        `;
+
+                    });
+
+                    let totalPages=Math.ceil(allStudents.length/rowsPerPage);
+
+                    if(totalPages===0) totalPages=1;
+
+                    document.getElementById("pageInfo").innerHTML=
+                        "Page "+currentPage+" of "+totalPages;
+
+                    document.getElementById("prevBtn").disabled=
+                        currentPage===1;
+
+                    document.getElementById("nextBtn").disabled=
+                        currentPage===totalPages;
+
+                }
+
+                // =====================================
+                // Load Students
+                // =====================================
+
+                function loadStudents(){
+
+                    fetch("/api/admin/students")
+
+                    .then(response=>{
+
+                        if(!response.ok){
+
+                            throw new Error("Unable to load students.");
+
+                        }
+
+                        return response.json();
+
+                    })
+
+                    .then(data=>{
+
+                        if(data.error){
+
+                            throw new Error(data.error);
+
+                        }
+
+                        originalStudents = data.students;
+                        allStudents = [...originalStudents];
+
+                        currentPage = 1;
+
+                        renderTable();
+
+                    })
+
+                    .catch(error=>{
+
+                        console.error(error);
+
+                        document.getElementById("allStudentsData").innerHTML=`
+
+                            <tr>
+
+                                <td colspan="11"
+                                    style="text-align:center;color:red;">
+
+                                    Failed to load students.
+
+                                </td>
+
+                            </tr>
+
+                        `;
+
+                    });
+
+                }
+
+                // =====================================
+                // Pagination
+                // =====================================
+
+                document.getElementById("nextBtn").addEventListener("click",function(){
+
+                    const totalPages=Math.ceil(allStudents.length/rowsPerPage);
+
+                    if(currentPage<totalPages){
+
+                        currentPage++;
+
+                        renderTable();
+
+                    }
+
+                });
+
+                document.getElementById("prevBtn").addEventListener("click",function(){
+
+                    if(currentPage>1){
+
+                        currentPage--;
+
+                        renderTable();
+
+                    }
+
+                });
+
+                // =====================================
+                // Search
+                // =====================================
+
+                document.getElementById("adminSearchInput")
+                .addEventListener("keyup",function(){
+
+                    const keyword=this.value.toLowerCase().trim();
+
+                    if(keyword===""){
+
+                        allStudents=[...originalStudents];
+
+                    }else{
+
+                        allStudents=originalStudents.filter(function(s){
+
+                            return (
+                                s.studentId.toLowerCase().includes(keyword) ||
+                                s.studentName.toLowerCase().includes(keyword) ||
+                                s.mobile.toLowerCase().includes(keyword) ||
+                                s.email.toLowerCase().includes(keyword) ||
+                                String(s.totalComplaint).includes(keyword) ||
+                                String(s.pending).includes(keyword) ||
+                                String(s.assigned).includes(keyword) ||
+                                String(s.inProgress).includes(keyword) ||
+                                String(s.resolved).includes(keyword) ||
+                                s.status.toLowerCase().includes(keyword)
+                            );
+
+                        });
+
+                    }
+
+                    currentPage=1;
+
+                    renderTable();
+
+                });
+
+                // =====================================
+                // Initial Load
+                // =====================================
+
+                loadStudents();
+
+                // =====================================
+                // Success / Error Popup
+                // =====================================
+
+                const params=new URLSearchParams(window.location.search);
+
+                if(params.has("success")){
+
+                    alert(params.get("success"));
+
+                }
+
+                if(params.has("error")){
+
+                    alert(params.get("error"));
+
+                }
+
+                window.history.replaceState({}, document.title, window.location.pathname);
+
+            });
+
+        </script>
+
+    <script src="/gms-api.js"></script>
+    <script>
+        document.addEventListener("submit", function (e) {
+            const form = e.target;
+            if (!form.classList.contains("status-form")) return;
+            e.preventDefault();
+            const button = e.submitter;
+            const action = button && button.value ? button.value : "";
+            GMS.post("/api/admin/students/" + encodeURIComponent(form.querySelector("[name=student_id]").value) + "/status", { action: action })
+                .then(function (d) { alert(d.message); window.location.reload(); })
+                .catch(function (err) { alert(err.message); });
+        });
+    </script>
+    </body>
+    
+</html>

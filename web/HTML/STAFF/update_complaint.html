@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Update Complaint - GMS</title>
+
+        <link rel="stylesheet" href="../../CSS/style.css">
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </head>
+
+    <body class="hide-search-page">
+
+        <div class="admin-container">
+
+            <aside class="sidebar">
+
+                <div class="sidebar-brand">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>GMS Staff</span>
+                </div>
+
+                <ul class="sidebar-menu">
+                    <li class="sidebar-item">
+                        <a href="staff_dashboard.html">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item">
+                        <a href="view_assigned_complaints.html">
+                            <i class="fa-solid fa-clipboard-check"></i>
+                            <span>View Assigned Complaints</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item active">
+                        <a href="update_complaint.html">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                            <span>Update Complaint</span>
+                        </a>
+                    </li>
+
+                </ul>
+
+            </aside> 
+
+            <nav class="navbar">
+
+                <div class="navbar-title">
+                    <h2>Staff Panel</h2>
+                </div>
+
+                <div class="navbar-right">
+
+                    <div class="navbar-search">
+                        <input type="text" id="staffsearchInput" placeholder="Search complaints, students...">
+                    </div>
+
+                    <div class="navbar-profile-container">
+
+                        <div class="navbar-profile" id="profileTrigger">
+                            <i class="fa-solid fa-circle-user profile-icon"></i>
+                            <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                        </div>
+
+                        <div class="profile-dropdown" id="profileDropdown">
+
+                            <div class="dropdown-header">
+                                <h4 id="staffName"></h4>
+                                <span class="dropdown-role">Staff</span>
+                            </div>
+
+                            <div class="dropdown-body">
+
+                                <div class="info-item">
+                                    <i class="fa-solid fa-building"></i>
+                                    <span id="staffDepartment"></span>
+                                </div>
+
+                                <div class="info-item">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <span id="staffMobile"></span>
+                                </div>
+
+                                <div class="info-item">
+                                    <i class="fa-solid fa-envelope"></i>
+                                    <span id="staffEmail"></span>
+                                </div>
+
+                                <div class="info-item">
+                                    <i class="fa-solid fa-star"></i>
+                                    <span id="staffRating"></span>
+                                </div>
+
+                            </div>
+
+                            <hr class="dropdown-divider">
+
+                            <ul class="dropdown-menu-links">
+                                <li>
+                                    <a href="staff_change_password.html">
+                                        <i class="fa-solid fa-lock"></i>
+                                        <span>Change Password</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="../../Home.html" class="logout-link">
+                                        <i class="fa-solid fa-right-from-bracket"></i>
+                                        <span>Logout</span>
+                                    </a>
+                                </li>
+                            </ul>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </nav>
+
+            <main class="main-content">
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div>
+                        <h2>Update Complaint Status</h2>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">
+                            Select a complaint and update its status.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="form-container">
+
+                    <form id="updateForm" method="POST">
+
+                        <div class="form-group">
+                            <label class="form-label">Select Complaint ID</label>
+                            <select name="complaint-id" id="complaintId" class="form-control" required>
+                                <option value="" disabled selected>-- Select Complaint --</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="complaint-title">Category</label>
+                            <input type="text" name="category" id="category" readonly class="form-control field-readonly">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="complaint-description">Detailed Description</label>
+                            <input type="text" name="description" id="description" readonly class="form-control field-readonly">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Status</label>
+                            <input type="text" name="complaint-status" id="status" readonly class="form-control field-readonly">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="newStatus">New Status</label>
+                            <select name="status" id="newStatus" class="form-control" required>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Resolved">Resolved</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="resolutionNote">Resolution Note</label>
+                            <textarea name="resolution" id="resolutionNote" class="form-control" rows="4" maxlength="500" placeholder="Describe what was done. Required when resolving."></textarea>
+                        </div>
+
+                        <!-- BUTTONS -->
+                        <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+
+                            <a href="staff_dashboard.html" class="btn btn-deactivate" style="text-decoration: none;">
+                                Cancel
+                            </a>
+
+                            <button type="submit" class="btn btn-assign">
+                                <i class="fa-solid fa-user-check"></i> Update Complaint
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </main>
+
+        </div>
+            
+        <script src="/gms-api.js"></script>
+        <script>
+
+            document.addEventListener("DOMContentLoaded", function () {
+
+                // ======================================
+                // Profile Dropdown
+                // ======================================
+
+                const profile = document.getElementById("profileTrigger");
+                const dropdown = document.getElementById("profileDropdown");
+
+                if(profile && dropdown){
+
+                    profile.addEventListener("click", function(e){
+
+                        e.stopPropagation();
+
+                        profile.classList.toggle("active");
+                        dropdown.classList.toggle("show");
+
+                    });
+
+                    document.addEventListener("click", function(e){
+
+                        if(!profile.contains(e.target) &&
+                        !dropdown.contains(e.target)){
+
+                            profile.classList.remove("active");
+                            dropdown.classList.remove("show");
+
+                        }
+
+                    });
+
+                }
+
+                // ======================================
+                // Load Staff Profile
+                // ======================================
+
+                fetch("/api/staff/profile")
+
+                .then(res => res.json())
+
+                .then(data => {
+
+                    if(data.error){
+
+                        alert(data.error);
+                        return;
+
+                    }
+
+                    document.getElementById("staffName").textContent =
+                        data.staffName;
+
+                    document.getElementById("staffDepartment").textContent =
+                        data.department;
+
+                    document.getElementById("staffMobile").textContent =
+                        data.mobile;
+
+                    document.getElementById("staffEmail").innerHTML =
+                        data.email.replace("@","@<wbr>");
+
+                    document.getElementById("staffRating").textContent = 
+                        data.rating + " / 5";
+
+                })
+
+                .catch(error => {
+
+                    console.error(error);
+
+                });
+
+                // ======================================
+                // Load Assigned Complaints
+                // ======================================
+
+                let complaints = [];
+
+                fetch("/api/staff/complaints")
+
+                .then(res => res.json())
+
+                .then(data => {
+
+                    if(data.error){
+
+                        alert(data.error);
+                        return;
+
+                    }
+
+                    complaints = data.complaints || [];
+
+                    const select = document.getElementById("complaintId");
+
+                    select.innerHTML =
+                        "<option value='' disabled selected>-- Select Complaint --</option>";
+
+                    complaints.forEach(function(c){
+
+                        select.innerHTML +=
+                        `<option value="${c.complaintId}">
+                            ${c.complaintId}
+                        </option>`;
+
+                    });
+
+                })
+
+                .catch(error => {
+
+                    console.error(error);
+
+                    alert("Unable to load complaints.");
+
+                });
+
+                // ======================================
+                // Complaint Selection
+                // ======================================
+
+                document.getElementById("updateForm").addEventListener("submit", function(e){
+
+                    e.preventDefault();
+
+                    const id = document.getElementById("complaintId").value;
+                    const status = document.getElementById("newStatus").value;
+                    const resolution = document.getElementById("resolutionNote").value.trim();
+
+                    GMS.post("/api/staff/complaints/" + encodeURIComponent(id) + "/status", { status: status, resolution: resolution })
+                    .then(function(){
+                        alert("Complaint " + id + " updated to " + status + ".");
+                        GMS.go("/HTML/STAFF/staff_dashboard.html");
+                    })
+                    .catch(function(error){
+                        alert(error.message);
+                    });
+
+                });
+
+                document.getElementById("complaintId")
+
+                .addEventListener("change", function(){
+
+                    const id = this.value;
+
+                    const complaint = complaints.find(function(c){
+
+                        return c.complaintId === id;
+
+
+                    });
+
+                    if(!complaint){
+
+                        document.getElementById("category").value = "";
+
+                        document.getElementById("description").value = "";
+
+                        document.getElementById("status").value = "";
+
+                        return;
+
+                    }
+
+                    document.getElementById("category").value =
+                        complaint.category;
+
+                    document.getElementById("description").value =
+                        complaint.description;
+
+                    const statusInput = document.getElementById("status");
+
+                    const currentStatus = complaint.status.trim().toLowerCase();
+
+                    if (currentStatus === "assigned") {
+
+                        statusInput.value = "In Progress";
+
+                    }
+                    else if (currentStatus === "in progress") {
+
+                        statusInput.value = "Resolved";
+
+                    }
+                    else {
+
+                        statusInput.value = complaint.status;
+
+                    }
+
+                });
+
+            });
+
+        </script>
+
+    </body>
+
+</html>
