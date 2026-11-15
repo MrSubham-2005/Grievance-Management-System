@@ -5,6 +5,7 @@
   "main": "server/app.js",
   "scripts": {
     "start": "node server/app.js",
+    "dev": "node --watch server/app.js",
     "setup-db": "node server/setup-db.js",
     "test": "node --test",
     "lint": "eslint ."

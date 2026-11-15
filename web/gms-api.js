@@ -25,6 +25,7 @@
             const error = new Error(data.error || "The request failed (" + response.status + "). Try again.");
             error.status = response.status;
             error.redirect = data.redirect || null;
+            error.data = data;
             throw error;
         }
         return data;

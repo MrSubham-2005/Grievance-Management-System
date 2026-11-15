@@ -3,6 +3,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const pool = require('../db');
 const { wrap } = require('../middleware');
+const { nextId, withIdLock } = require('../id-generator');
 
 const router = express.Router();
 
@@ -16,25 +17,60 @@ function clean(v) {
   return typeof v === 'string' ? v.trim() : '';
 }
 
-async function nextId(table, column, prefix) {
+router.nextId = nextId;
+
+async function findUserForLogin(table, identifier, password) {
+  if (!identifier || !password) {
+    return { error: { status: 400, message: 'Enter your email and password.' } };
+  }
+
   const { rows } = await pool.query(
-    `SELECT COALESCE(MAX(CAST(SUBSTRING(${column} FROM ${prefix.length + 1}) AS INTEGER)), 0) AS n FROM ${table}`
+    `SELECT * FROM ${table} WHERE LOWER(email) = LOWER($1) OR mobile = $1`,
+    [identifier]
   );
-  return `${prefix}${String(Number(rows[0].n) + 1).padStart(4, '0')}`;
+
+  if (!rows || rows.length === 0) {
+    return { notFound: true, error: { status: 401, message: 'Email or password is incorrect.' } };
+  }
+
+  let candidates = rows;
+  if (candidates.length > 1) {
+    if (identifier.includes('@')) {
+      candidates = candidates.filter(
+        (r) => r.email && r.email.toLowerCase() === identifier.toLowerCase()
+      );
+    } else {
+      candidates = candidates.filter((r) => r.mobile && r.mobile === identifier);
+    }
+  }
+
+  let matchedUser = null;
+  for (const candidate of candidates) {
+    if (await bcrypt.compare(password, candidate.password)) {
+      if (matchedUser) {
+        return { error: { status: 401, message: 'Email or password is incorrect.' } };
+      }
+      matchedUser = candidate;
+    }
+  }
+
+  if (!matchedUser) {
+    return { error: { status: 401, message: 'Email or password is incorrect.' } };
+  }
+
+  return { user: matchedUser };
 }
 
 // Students
 
 router.post('/student/login', wrap(async (req, res) => {
-  const email = clean(req.body.studentEmail).toLowerCase();
-  const password = req.body.studentPassword || '';
-  if (!email || !password) return fail(res, 400, 'Enter your email and password.');
-  const { rows } = await pool.query('SELECT * FROM student WHERE LOWER(email) = $1', [email]);
-  if (!rows[0] || !(await bcrypt.compare(password, rows[0].password))) {
-    return fail(res, 401, 'Email or password is incorrect.');
-  }
-  if (rows[0].status !== 'Active') return fail(res, 403, 'This student account is blocked. Contact the admin.');
-  req.session.student = { id: rows[0].student_id, name: rows[0].student_name, email: rows[0].email };
+  const identifier = clean(req.body.studentEmail || req.body.email || req.body.studentMobile || req.body.mobile || req.body.identifier);
+  const password = req.body.studentPassword || req.body.password || '';
+  const result = await findUserForLogin('student', identifier, password);
+  if (result.error) return fail(res, result.error.status, result.error.message);
+  const user = result.user;
+  if ((user.status || '').toLowerCase() !== 'active') return fail(res, 403, 'This student account is blocked. Contact the admin.');
+  req.session.student = { id: user.student_id, name: user.student_name, email: user.email };
   res.json({ ok: true, redirect: '/HTML/STUDENTS/student_dashboard.html' });
 }));
 
@@ -49,29 +85,59 @@ router.post('/student/signup', wrap(async (req, res) => {
     return fail(res, 400, 'Fill in every field to create your student account.');
   }
   if (password.length < 6) return fail(res, 400, 'Password must be at least 6 characters.');
-  const taken = await pool.query('SELECT 1 FROM student WHERE LOWER(email) = $1 OR mobile = $2', [email, mobile]);
-  if (taken.rowCount) return fail(res, 409, 'A student with this email or mobile already exists. Sign in instead.');
-  const id = await nextId('student', 'student_id', 'STU');
-  await pool.query(
-    `INSERT INTO student (student_id, student_name, mobile, email, password, security_question, security_answer)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-    [id, name, mobile, email, await bcrypt.hash(password, 10), question, answer.toLowerCase()]
-  );
-  res.status(201).json({ ok: true, studentId: id, redirect: '/HTML/STUDENTS/student_login.html' });
+  const outcome = await withIdLock(pool, 'student', async (client) => {
+    const existing = await client.query(
+      'SELECT LOWER(email) AS email, mobile FROM student WHERE LOWER(email) = $1 OR mobile = $2',
+      [email, mobile]
+    );
+    if (existing.rowCount > 0) {
+      const emailTaken = existing.rows.some((r) => r.email === email);
+      const mobileTaken = existing.rows.some((r) => r.mobile === mobile);
+      if (emailTaken) {
+        return { error: { status: 409, message: 'Email already registered' } };
+      }
+      if (mobileTaken) {
+        return { error: { status: 409, message: 'Mobile Number already registered' } };
+      }
+    }
+    const id = await nextId('student', 'student_id', 'STU', client);
+    await client.query(
+      `INSERT INTO student (student_id, student_name, mobile, email, password, security_question, security_answer)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [id, name, mobile, email, await bcrypt.hash(password, 10), question, answer.toLowerCase()]
+    );
+    return { id };
+  });
+  if (outcome.error) return fail(res, outcome.error.status, outcome.error.message);
+  res.status(201).json({ ok: true, studentId: outcome.id, redirect: '/HTML/STUDENTS/student_login.html' });
 }));
 
 // Staff
 
 router.post('/staff/login', wrap(async (req, res) => {
-  const email = clean(req.body.staffEmail).toLowerCase();
-  const password = req.body.staffPassword || '';
-  if (!email || !password) return fail(res, 400, 'Enter your email and password.');
-  const { rows } = await pool.query('SELECT * FROM staff WHERE LOWER(email) = $1', [email]);
-  if (!rows[0] || !(await bcrypt.compare(password, rows[0].password))) {
-    return fail(res, 401, 'Email or password is incorrect.');
+  const identifier = clean(req.body.staffEmail || req.body.email || req.body.staffMobile || req.body.mobile || req.body.identifier);
+  const password = req.body.staffPassword || req.body.password || '';
+  const result = await findUserForLogin('staff', identifier, password);
+  if (result.notFound && identifier) {
+    const pending = await pool.query(
+      `SELECT 1
+       FROM staff_request
+       WHERE LOWER(email) = LOWER($1) OR mobile = $1
+       LIMIT 1`,
+      [identifier]
+    );
+    if (pending.rowCount) {
+      return fail(
+        res,
+        403,
+        'Your registration request is pending Admin approval. Please wait until your account is approved.'
+      );
+    }
   }
-  if (rows[0].status !== 'Active') return fail(res, 403, 'Your staff account is not active. Wait for admin approval.');
-  req.session.staff = { id: rows[0].staff_id, name: rows[0].staff_name, email: rows[0].email, department: rows[0].department };
+  if (result.error) return fail(res, result.error.status, result.error.message);
+  const user = result.user;
+  if ((user.status || '').toLowerCase() !== 'active') return fail(res, 403, 'Your staff account is not active. Wait for admin approval.');
+  req.session.staff = { id: user.staff_id, name: user.staff_name, email: user.email, department: user.department };
   res.json({ ok: true, redirect: '/HTML/STAFF/staff_dashboard.html' });
 }));
 
@@ -87,32 +153,51 @@ router.post('/staff/signup', wrap(async (req, res) => {
     return fail(res, 400, 'Fill in every field to request a staff account.');
   }
   if (password.length < 6) return fail(res, 400, 'Password must be at least 6 characters.');
-  const taken = await pool.query(
-    `SELECT 1 FROM staff WHERE LOWER(email)=$1 OR mobile=$2
-     UNION ALL SELECT 1 FROM staff_request WHERE LOWER(email)=$1 OR mobile=$2`,
-    [email, mobile]
-  );
-  if (taken.rowCount) return fail(res, 409, 'A staff account or pending request already uses this email or mobile.');
-  const id = await nextId('staff_request', 'request_id', 'REQ');
-  await pool.query(
-    `INSERT INTO staff_request (request_id, staff_name, mobile, email, department, password, security_question, security_answer)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-    [id, name, mobile, email, department, await bcrypt.hash(password, 10), question, answer.toLowerCase()]
-  );
-  res.status(201).json({ ok: true, requestId: id, message: 'Request sent. An admin must approve it before you can sign in.' });
+  const outcome = await withIdLock(pool, 'staff_request', async (client) => {
+    const existingStaff = await client.query(
+      'SELECT LOWER(email) AS email, mobile FROM staff WHERE LOWER(email) = $1 OR mobile = $2',
+      [email, mobile]
+    );
+    if (existingStaff.rowCount > 0) {
+      const emailTaken = existingStaff.rows.some((r) => r.email === email);
+      if (emailTaken) {
+        return { error: { status: 409, message: 'Email Already Registered' } };
+      }
+      return { error: { status: 409, message: 'Mobile Number Already Registered' } };
+    }
+
+    const existingReq = await client.query(
+      'SELECT LOWER(email) AS email, mobile FROM staff_request WHERE LOWER(email) = $1 OR mobile = $2',
+      [email, mobile]
+    );
+    if (existingReq.rowCount > 0) {
+      const reqEmailTaken = existingReq.rows.some((r) => r.email === email);
+      if (reqEmailTaken) {
+        return { error: { status: 409, message: 'Email Already Requested' } };
+      }
+      return { error: { status: 409, message: 'Mobile Number Already Requested' } };
+    }
+    const id = await nextId('staff_request', 'request_id', 'REQ', client);
+    await client.query(
+      `INSERT INTO staff_request (request_id, staff_name, mobile, email, department, password, security_question, security_answer)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [id, name, mobile, email, department, await bcrypt.hash(password, 10), question, answer.toLowerCase()]
+    );
+    return { id };
+  });
+  if (outcome.error) return fail(res, outcome.error.status, outcome.error.message);
+  res.status(201).json({ ok: true, requestId: outcome.id, message: 'Request sent. An admin must approve it before you can sign in.' });
 }));
 
 // Admins
 
 router.post('/admin/login', wrap(async (req, res) => {
-  const email = clean(req.body.adminEmail).toLowerCase();
-  const password = req.body.adminPassword || '';
-  if (!email || !password) return fail(res, 400, 'Enter your email and password.');
-  const { rows } = await pool.query('SELECT * FROM admin WHERE LOWER(email) = $1', [email]);
-  if (!rows[0] || !(await bcrypt.compare(password, rows[0].password))) {
-    return fail(res, 401, 'Email or password is incorrect.');
-  }
-  req.session.admin = { id: rows[0].admin_id, name: rows[0].admin_name, email: rows[0].email };
+  const identifier = clean(req.body.adminEmail || req.body.email || req.body.adminMobile || req.body.mobile || req.body.identifier);
+  const password = req.body.adminPassword || req.body.password || '';
+  const result = await findUserForLogin('admin', identifier, password);
+  if (result.error) return fail(res, result.error.status, result.error.message);
+  const user = result.user;
+  req.session.admin = { id: user.admin_id, name: user.admin_name, email: user.email };
   res.json({ ok: true, redirect: '/HTML/ADMIN/admin_dashboard.html' });
 }));
 
@@ -132,15 +217,25 @@ router.post('/admin/signup', wrap(async (req, res) => {
   if (!secret.rowCount || !(await bcrypt.compare(code, secret.rows[0].secret_code))) {
     return fail(res, 403, 'The admin code is wrong. Ask the system owner for the current code.');
   }
-  const taken = await pool.query('SELECT 1 FROM admin WHERE LOWER(email)=$1', [email]);
-  if (taken.rowCount) return fail(res, 409, 'An admin with this email already exists. Sign in instead.');
-  const id = await nextId('admin', 'admin_id', 'ADM');
-  await pool.query(
-    `INSERT INTO admin (admin_id, admin_name, mobile, email, password, security_question, security_answer)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-    [id, name, mobile, email, await bcrypt.hash(password, 10), question, answer.toLowerCase()]
-  );
-  res.status(201).json({ ok: true, adminId: id, redirect: '/HTML/ADMIN/admin_login.html' });
+  const outcome = await withIdLock(pool, 'admin', async (client) => {
+    const taken = await client.query('SELECT 1 FROM admin WHERE LOWER(email)=$1', [email]);
+    if (taken.rowCount) {
+      return { error: { status: 409, message: 'An admin with this email already exists. Sign in instead.' } };
+    }
+    const mobileTaken = await client.query('SELECT 1 FROM admin WHERE mobile=$1', [mobile]);
+    if (mobileTaken.rowCount) {
+      return { error: { status: 409, message: 'Mobile Already Exists' } };
+    }
+    const id = await nextId('admin', 'admin_id', 'ADM', client);
+    await client.query(
+      `INSERT INTO admin (admin_id, admin_name, mobile, email, password, security_question, security_answer)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [id, name, mobile, email, await bcrypt.hash(password, 10), question, answer.toLowerCase()]
+    );
+    return { id };
+  });
+  if (outcome.error) return fail(res, outcome.error.status, outcome.error.message);
+  res.status(201).json({ ok: true, adminId: outcome.id, redirect: '/HTML/ADMIN/admin_login.html' });
 }));
 
 // Forgot password: checks the email, security question and answer, then sets a new password.
@@ -169,7 +264,22 @@ router.post('/:role/reset-password', wrap(async (req, res) => {
     [email]
   );
   const account = rows[0];
-  if (!account) return fail(res, 404, `No ${config.label} account uses that email. Check the address or sign up first.`);
+  if (!account) {
+    if (req.params.role === 'staff') {
+      const pending = await pool.query(
+        'SELECT 1 FROM staff_request WHERE LOWER(email) = $1 LIMIT 1',
+        [email]
+      );
+      if (pending.rowCount) {
+        return fail(
+          res,
+          403,
+          'Your registration request is pending Admin approval. Please wait until your account is approved.'
+        );
+      }
+    }
+    return fail(res, 404, `No ${config.label} account uses that email. Check the address or sign up first.`);
+  }
 
   const { rows: recent } = await pool.query(
     `SELECT COUNT(*)::int AS n FROM reset_attempt

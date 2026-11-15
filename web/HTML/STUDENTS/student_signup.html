@@ -457,7 +457,18 @@
                         alert("Account created. Sign in with your email and password.");
                         GMS.go(data.redirect);
                     }).catch(function (error) {
-                        alert(error.message);
+                        const msg = (error && error.message) ? error.message : "";
+                        if (msg === "Email already registered") {
+                            mobileError.innerHTML = "";
+                            emailError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> ' + msg;
+                            scrollToError(emailInput);
+                        } else if (msg === "Mobile Number already registered") {
+                            emailError.innerHTML = "";
+                            mobileError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> ' + msg;
+                            scrollToError(mobileInput);
+                        } else {
+                            alert(msg);
+                        }
                     });
 
                 } else {

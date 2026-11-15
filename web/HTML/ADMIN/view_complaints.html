@@ -178,12 +178,6 @@
 
                     <span id="pageInfo"></span>
 
-                    <div id="timelinePanel" style="display:none;margin-top:20px;">
-                        <h3 id="timelineTitle"></h3>
-                        <p id="timelineStatus" style="display:none;"></p>
-                        <ol class="timeline" id="timelineList"></ol>
-                    </div>
-
                     <button id="nextBtn" class="btn btn-next">
                         Next >>
                     </button>
@@ -192,48 +186,10 @@
 
             </main>
 
-        </div>        <script>
-            // Opens the case timeline for one complaint. Text is set with textContent, never as HTML.
-            async function openTimeline(complaintId){
-                const panel=document.getElementById("timelinePanel");
-                const list=document.getElementById("timelineList");
-                const status=document.getElementById("timelineStatus");
-                document.getElementById("timelineTitle").textContent="Case timeline: "+complaintId;
-                list.innerHTML="";
-                status.style.display="none";
-                panel.style.display="block";
-                try{
-                    const res=await fetch("/api/admin/complaints/"+encodeURIComponent(complaintId)+"/timeline",{credentials:"same-origin"});
-                    const data=await res.json();
-                    if(!res.ok) throw new Error(data.error||"The timeline could not be loaded.");
-                    if(!data.events.length){
-                        status.textContent="No activity has been recorded for this complaint yet.";
-                        status.style.display="block";
-                        return;
-                    }
-                    data.events.forEach(function(ev){
-                        const li=document.createElement("li");
-                        const text=document.createElement("span");
-                        text.textContent=ev.message;
-                        const meta=document.createElement("span");
-                        meta.className="timeline-meta";
-                        meta.textContent=new Date(ev.at).toLocaleString("en-IN");
-                        li.appendChild(text);
-                        li.appendChild(meta);
-                        list.appendChild(li);
-                    });
-                }catch(err){
-                    status.textContent=err.message;
-                    status.style.color="#c62828";
-                    status.style.display="block";
-                }
-            }
-
-            document.getElementById("allComplaints").addEventListener("click",function(e){
-                const btn=e.target.closest(".timeline-open");
-                if(btn) openTimeline(btn.dataset.id);
-            });
-
+        </div>
+        <script src="/gms-date.js"></script>
+        <script src="/gms-tooltip.js"></script>
+        <script>
             document.addEventListener("DOMContentLoaded",()=>{
 
                 // =====================================
@@ -342,21 +298,13 @@
 
                         `;
 
-                        return;
-
-                    }
+                    }else{
 
                     pageData.forEach(function(c){
 
+                        const esc = GMSTooltip.escapeHtml;
                         let badge="";
-                        let description = wrapText(c.description || "", 50);
-                        if (c.aiAnalysis && Array.isArray(c.aiAnalysis.issues)) {
-                            const esc = (t) => String(t || "").replace(/[&<>"']/g, (ch) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-                            const lines = [c.aiAnalysis.verdict || ""].concat(
-                                c.aiAnalysis.issues.map((i, n) => (n + 1) + ". " + (i.category || "") + " (" + (i.priority || "") + "): " + (i.text || ""))
-                            ).join("\n");
-                            description += ` <i class="fa-solid fa-robot" title="${esc(lines)}"></i>`;
-                        }
+                        const description = wrapText(esc(c.description || ""), 50);
 
                         switch((c.status || "").toLowerCase()){
 
@@ -380,51 +328,53 @@
                                 badge="";
                         }
 
+                        const studentInfoTip = GMSTooltip.renderInfoTip({
+                            idPrefix: "raised-tip",
+                            ariaLabel: "Complaint raised details for " + c.complaintId,
+                            rows: [
+                                { label: "Raised On", value: GMSDate.formatDate(c.complaintDate, "Not Available") }
+                            ]
+                        });
+
+                        const isUnassigned = !c.assignedStaffId || !c.staffName || c.staffName.toLowerCase() === "not assigned";
+                        const staffCellHtml = isUnassigned
+                            ? "Not Assigned"
+                            : `${esc(c.staffName)} ${GMSTooltip.renderInfoTip({
+                                idPrefix: "assign-tip",
+                                ariaLabel: "Assignment details for " + c.complaintId,
+                                rows: [
+                                    { label: "Assigned By", value: c.assignedBy || "Not Available" },
+                                    { label: "Assigned On", value: GMSDate.formatDate(c.assignedAt, "Not Available") }
+                                ]
+                            })}`;
+
                         tbody.innerHTML+=`
 
                         <tr>
 
-                            <td><button type="button" class="timeline-open" data-id="${c.complaintId}" style="background:none;border:0;padding:0;color:#2563eb;font:inherit;cursor:pointer;text-decoration:underline;">${c.complaintId}</button></td>
+                            <td>${esc(c.complaintId)}</td>
 
                             <td>
 
-                                ${c.studentName}
+                                ${esc(c.studentName)}
 
-                                <i class="fa-solid fa-circle-info added-by-icon"
-                                title="Raised On : ${c.complaintDate}">
-                                </i>
+                                ${studentInfoTip}
 
                             </td>
 
-                            <td>${c.category}</td>
+                            <td>${esc(c.category)}</td>
 
                             <td>${description}</td>
 
-                            <td>${c.supportedBy}</td>
+                            <td>${esc(c.supportedBy)}</td>
 
-                            <td>
-
-                                ${c.staffName==="Not Assigned"
-
-                                ? "Not Assigned"
-
-                                :`
-
-                                    ${c.staffName}
-
-                                    <i class="fa-solid fa-circle-info added-by-icon"
-                                    title="Assigned By : ${c.assignedBy}\nAssigned On : ${c.assignedAt}">
-                                    </i>
-
-                                `}
-
-                            </td>
+                            <td>${staffCellHtml}</td>
 
                             <td>
 
                                 <span class="badge ${badge}">
 
-                                    ${c.status}
+                                    ${esc(c.status)}
 
                                 </span>
                                 ${c.overdue ? '<span class="badge badge-overdue" style="margin-left:4px;">Overdue</span>' : ""}
@@ -438,7 +388,7 @@
                                     <button
                                         type="button"
                                         class="btn btn-delete delete-btn"
-                                        data-id="${c.complaintId}">
+                                        data-id="${esc(c.complaintId)}">
 
                                         <i class="fa-solid fa-trash"></i>
                                         Delete
@@ -448,7 +398,7 @@
                                     <button
                                         type="button"
                                         class="btn btn-assign undo-btn"
-                                        data-id="${c.complaintId}"
+                                        data-id="${esc(c.complaintId)}"
                                         style="display:none;">
 
                                         <i class="fa-solid fa-rotate-left"></i>
@@ -465,6 +415,10 @@
                         `;
 
                     });
+
+                    GMSTooltip.wire(tbody);
+
+                    }
 
                     let totalPages=Math.ceil(allComplaints.length/rowsPerPage);
 
@@ -484,12 +438,44 @@
                 }
 
                 // =====================================
-                // Load Complaints
+                // Filter & Load Complaints
                 // =====================================
 
-                function loadComplaints(){
+                let lastComplaintsSnapshot = null;
+                let isLoadingComplaints = false;
 
-                    fetch("/api/admin/complaints")
+                function applyComplaintFilter(resetPage) {
+                    const searchInput = document.getElementById("adminSearchInput");
+                    const keyword = searchInput ? searchInput.value.trim().toLowerCase() : "";
+
+                    if (keyword === "") {
+                        allComplaints = [...originalComplaints];
+                    } else {
+                        allComplaints = originalComplaints.filter(function (c) {
+                            return (
+                                c.complaintId.toLowerCase().includes(keyword) ||
+                                c.complaintId.replace(/-/g, "").toLowerCase().includes(keyword) ||
+                                c.studentName.toLowerCase().includes(keyword) ||
+                                c.category.toLowerCase().includes(keyword) ||
+                                c.description.toLowerCase().includes(keyword) ||
+                                c.supportedBy.toLowerCase().includes(keyword) ||
+                                c.staffName.toLowerCase().includes(keyword) ||
+                                c.status.toLowerCase().includes(keyword)
+                            );
+                        });
+                    }
+
+                    const totalPages = Math.max(1, Math.ceil(allComplaints.length / rowsPerPage));
+                    currentPage = resetPage ? 1 : Math.min(Math.max(1, currentPage), totalPages);
+                    renderTable();
+                }
+
+                function loadComplaints(options) {
+                    const preserveState = Boolean(options && options.preserveState);
+                    if (isLoadingComplaints) return;
+                    isLoadingComplaints = true;
+
+                    fetch("/api/admin/complaints", { credentials: "same-origin", cache: "no-store" })
 
                     .then(response=>{
 
@@ -507,13 +493,14 @@
                             throw new Error(data.error);
                         }
 
-                        originalComplaints=data.complaints || [];
-
-                        allComplaints=[...originalComplaints];
-
-                        currentPage=1;
-
-                        renderTable();
+                        const nextComplaints = data.complaints || [];
+                        const snapshot = JSON.stringify(nextComplaints);
+                        if (preserveState && snapshot === lastComplaintsSnapshot) {
+                            return;
+                        }
+                        lastComplaintsSnapshot = snapshot;
+                        originalComplaints = nextComplaints;
+                        applyComplaintFilter(!preserveState);
 
                     })
 
@@ -521,20 +508,25 @@
 
                         console.error(error);
 
-                        document.getElementById("allComplaints").innerHTML=`
+                        if (!preserveState) {
+                            document.getElementById("allComplaints").innerHTML=`
 
-                            <tr>
+                                <tr>
 
-                                <td colspan="8" style="text-align:center;color:red;">
+                                    <td colspan="8" style="text-align:center;color:red;">
 
-                                    Failed to load complaints.
+                                        Failed to load complaints.
 
-                                </td>
+                                    </td>
 
-                            </tr>
+                                </tr>
 
-                        `;
+                            `;
+                        }
 
+                    })
+                    .finally(() => {
+                        isLoadingComplaints = false;
                     });
 
                 };
@@ -625,7 +617,7 @@
 
                                     delete deleteTimers[complaintId];
 
-                                    loadComplaints();
+                                    loadComplaints({ preserveState: true });
 
                                 })
 
@@ -633,7 +625,7 @@
 
                                     alert("Unable to delete complaint.");
 
-                                    loadComplaints();
+                                    loadComplaints({ preserveState: true });
 
                                 });
 
@@ -707,49 +699,27 @@
                 document.getElementById("adminSearchInput")
                 .addEventListener("keyup",function(){
 
-                    const keyword=this.value.trim().toLowerCase();
-
-                    if(keyword===""){
-
-                        allComplaints=[...originalComplaints];
-
-                    }else{
-
-                        allComplaints=originalComplaints.filter(function(c){
-
-                            return(
-
-                                c.complaintId.toLowerCase().includes(keyword) ||
-
-                                c.studentName.toLowerCase().includes(keyword) ||
-
-                                c.category.toLowerCase().includes(keyword) ||
-
-                                c.description.toLowerCase().includes(keyword) ||
-
-                                c.supportedBy.toLowerCase().includes(keyword) ||
-
-                                c.staffName.toLowerCase().includes(keyword) ||
-
-                                c.status.toLowerCase().includes(keyword)
-
-                            );
-
-                        });
-
-                    }
-
-                    currentPage=1;
-
-                    renderTable();
+                    applyComplaintFilter(true);
 
                 });
 
                 // =====================================
-                // Initial Load
+                // Initial Load & Auto Refresh
                 // =====================================
 
                 loadComplaints();
+                setInterval(function () {
+                    loadComplaints({ preserveState: true });
+                }, 15000);
+                document.addEventListener("visibilitychange", function () {
+                    if (!document.hidden) loadComplaints({ preserveState: true });
+                });
+                window.addEventListener("focus", function () {
+                    loadComplaints({ preserveState: true });
+                });
+                window.addEventListener("pageshow", function (event) {
+                    if (event.persisted) loadComplaints({ preserveState: true });
+                });
 
                 // =====================================
                 // Success / Error Popup

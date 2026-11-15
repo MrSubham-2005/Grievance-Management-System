@@ -146,7 +146,7 @@
 
             // Gmail Validation
             function isValidEmail(email) {
-                return /^[a-z0-9._%+-]+@gmail\.com$/.test(email);
+                return /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email);
             }
 
             // Indian Mobile Validation
@@ -222,6 +222,14 @@
                     }).then(function (data) {
                         GMS.go(data.redirect);
                     }).catch(function (error) {
+                        const pendingApprovalMsg = "Your registration request is pending Admin approval. Please wait until your account is approved.";
+                        if (error.message === pendingApprovalMsg || (error.data && error.data.error === pendingApprovalMsg)) {
+                            passwordError.innerHTML = "";
+                            alert(pendingApprovalMsg);
+                            passwordInput.value = "";
+                            passwordInput.focus();
+                            return;
+                        }
                         passwordError.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> ' + error.message;
                         passwordInput.value = "";
                         passwordInput.focus();

@@ -188,6 +188,8 @@
 
         </div>
 
+        <script src="/gms-date.js"></script>
+        <script src="/gms-tooltip.js"></script>
         <script>
 
             document.addEventListener("DOMContentLoaded", function () {
@@ -415,20 +417,19 @@
 
                         }
 
-                        let staffNameHtml = "";
+                        const esc = GMSTooltip.escapeHtml;
+                        let staffNameHtml = esc(s.staffName);
 
-                        if(s.staffId.startsWith("REQ-")){
+                        if(!s.staffId.startsWith("REQ-")){
 
-                            staffNameHtml = s.staffName;
-
-                        }else{
-
-                            staffNameHtml = `
-                                ${s.staffName}
-                                <i class="fa-solid fa-circle-info added-by-icon"
-                                title="Added By: ${s.addedBy}\nDate: ${s.createdDate}">
-                                </i>
-                            `;
+                            staffNameHtml = `${esc(s.staffName)} ${GMSTooltip.renderInfoTip({
+                                idPrefix: "staff-tip",
+                                ariaLabel: "Approval details for " + s.staffName,
+                                rows: [
+                                    { label: "Added By", value: s.addedBy || "Not Available" },
+                                    { label: "Approved On", value: GMSDate.formatDate(s.approvedOn, "Not Available") }
+                                ]
+                            })}`;
 
                         }
                         
@@ -436,15 +437,15 @@
 
                         <tr>
 
-                            <td>${s.staffId}</td>
+                            <td>${esc(s.staffId)}</td>
 
                             <td>${staffNameHtml}</td>
 
-                            <td>${formatMobile(s.mobile)}</td>
+                            <td>${esc(formatMobile(s.mobile))}</td>
 
-                            <td>${s.email}</td>
+                            <td>${esc(s.email)}</td>
 
-                            <td>${s.department}</td>
+                            <td>${esc(s.department)}</td>
 
                             <td>${s.totalComplaint}</td>
 
@@ -459,7 +460,7 @@
                             <td>
 
                                 <span class="badge ${badge}">
-                                    ${s.status}
+                                    ${esc(s.status)}
                                 </span>
 
                             </td>
@@ -475,6 +476,8 @@
                         `;
 
                     });
+
+                    GMSTooltip.wire(tbody);
 
                     let totalPages = Math.ceil(allStaff.length / rowsPerPage);
 
@@ -791,6 +794,7 @@
 
                             return (
                                 s.staffId.toLowerCase().includes(keyword) ||
+                                s.staffId.replace(/-/g, "").toLowerCase().includes(keyword) ||
                                 s.staffName.toLowerCase().includes(keyword) ||
                                 s.mobile.toLowerCase().includes(keyword) ||
                                 s.email.toLowerCase().includes(keyword) ||

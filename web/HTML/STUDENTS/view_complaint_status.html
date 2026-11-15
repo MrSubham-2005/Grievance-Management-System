@@ -134,13 +134,13 @@
                     <table class="custom-table">
                         <thead>
                             <tr>
-                                <th>Complaint ID</th>
-                                <th>Category</th>
-                                <th>Description</th>
-                                <th>Assigned Staff</th>
-                                <th>Last Updated</th>
-                                <th>Status</th>
-                                <th>Type</th>
+                                <th scope="col">Complaint ID</th>
+                                <th scope="col">Category</th>
+                                <th scope="col">Description</th>
+                                <th scope="col">Assigned Staff</th>
+                                <th scope="col">Last Updated</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Type</th>
                             </tr>
                         </thead>
 
@@ -176,6 +176,7 @@
 
         </div>
 
+        <script src="/gms-date.js"></script>
         <script src="/gms-api.js"></script>
         <script>
 
@@ -271,13 +272,10 @@
                     });
                 }
 
-                function analysisTitle(analysis){
-                    const issues = Array.isArray(analysis.issues) ? analysis.issues : [];
-                    const lines = [analysis.verdict || ""];
-                    issues.forEach(function(issue, index){
-                        lines.push((index + 1) + ". " + (issue.category || "Other") + " (" + (issue.priority || "Medium") + "): " + (issue.text || ""));
-                    });
-                    return escapeText(lines.filter(Boolean).join("\n"));
+                function formatComplaintId(id){
+                    const raw = String(id || "").trim();
+                    const match = raw.match(/^CMP-?(\d+)$/i);
+                    return match ? "CMP-" + match[1].padStart(4, "0") : raw;
                 }
 
                 // Opens the case timeline for one complaint. Text is set with textContent, never as HTML.
@@ -285,13 +283,13 @@
                     const panel=document.getElementById("timelinePanel");
                     const list=document.getElementById("timelineList");
                     const status=document.getElementById("timelineStatus");
-                    document.getElementById("timelineTitle").textContent="Case timeline: "+complaintId;
+                    document.getElementById("timelineTitle").textContent="Case timeline: "+formatComplaintId(complaintId);
                     list.innerHTML="";
                     status.style.display="none";
                     panel.style.display="block";
                     try{
                         const data=await GMS.get("/api/student/complaints/"+encodeURIComponent(complaintId)+"/timeline");
-                        if(!data.events.length){
+                        if(!data.events || !data.events.length){
                             GMS.notify(status,"No activity has been recorded for this complaint yet.",false);
                             return;
                         }
@@ -301,7 +299,7 @@
                             text.textContent=ev.message;
                             const meta=document.createElement("span");
                             meta.className="timeline-meta";
-                            meta.textContent=new Date(ev.at).toLocaleString("en-IN");
+                            meta.textContent=GMSDate.formatDateTime(ev.at);
                             li.appendChild(text);
                             li.appendChild(meta);
                             list.appendChild(li);
@@ -342,7 +340,7 @@
                         pageData.forEach(function(c){
 
                             let badge="";
-                            let description = wrapText(c.description || "", 50);
+                            const description = wrapText(escapeText(c.description || ""), 50);
 
                             switch((c.status||"").toLowerCase()){
 
@@ -367,33 +365,32 @@
 
                             }
 
-                            const verdictTitle = c.aiAnalysis ? analysisTitle(c.aiAnalysis) : "";
-                            const verdictIcon = verdictTitle
-                                ? `<i class="fa-solid fa-robot" title="${verdictTitle}" style="margin-left:6px;color:#2563eb;"></i>`
-                                : "";
+                            const displayId = escapeText(formatComplaintId(c.complaintId));
+                            const displayType = escapeText(c.type || "");
+                            const displayStatus = escapeText(c.status || "");
 
                             tbody.innerHTML+=`
 
                             <tr>
 
-                                <td><button type="button" class="timeline-open" data-id="${c.complaintId}" style="background:none;border:0;padding:0;color:#2563eb;font:inherit;cursor:pointer;text-decoration:underline;">${c.complaintId}</button>${verdictIcon}</td>
+                                <td><button type="button" class="timeline-open" data-id="${escapeText(c.complaintId)}" style="background:none;border:0;padding:0;color:#2563eb;font:inherit;cursor:pointer;text-decoration:underline;">${displayId}</button></td>
 
-                                <td>${c.category}</td>
+                                <td>${escapeText(c.category)}</td>
 
                                 <td>${description}</td>
 
-                                <td>${c.assignedStaff}</td>
+                                <td>${escapeText(c.assignedStaff || "Not assigned")}</td>
 
-                                <td>${c.date}</td>
+                                <td>${escapeText(GMSDate.formatDate(c.date))}</td>
 
                                 <td>
                                     <span class="badge ${badge}">
-                                        ${c.status}
+                                        ${displayStatus}
                                     </span>
                                     ${c.overdue ? '<span class="badge badge-overdue" style="margin-left:4px;">Overdue</span>' : ""}
                                 </td>
 
-                                <td>${c.type}</td>
+                                <td>${displayType}</td>
 
                             </tr>
 
@@ -421,12 +418,47 @@
                 }
 
                 // =====================================
-                // Load Complaints
+                // Filter & Load Complaints
                 // =====================================
 
-                function loadComplaints(){
+                let lastComplaintsSnapshot = null;
+                let isLoadingComplaints = false;
 
-                    fetch("/api/student/complaints")
+                function applyComplaintFilter(resetPage){
+                    const searchInput = document.getElementById("studentSearchInput");
+                    const keyword = searchInput ? searchInput.value.trim().toLowerCase() : "";
+
+                    if(keyword===""){
+                        allMyComplaints=[...originalMyComplaints];
+                    }else{
+                        allMyComplaints=originalMyComplaints.filter(function(c){
+                            const formattedDate = GMSDate.formatDate(c.date).toLowerCase();
+                            const rawDate = String(c.date || "").toLowerCase();
+                            return (
+                                c.complaintId.toLowerCase().includes(keyword) ||
+                                c.complaintId.replace(/-/g, "").toLowerCase().includes(keyword) ||
+                                c.category.toLowerCase().includes(keyword) ||
+                                c.description.toLowerCase().includes(keyword) ||
+                                c.assignedStaff.toLowerCase().includes(keyword) ||
+                                formattedDate.includes(keyword) ||
+                                rawDate.includes(keyword) ||
+                                c.status.toLowerCase().includes(keyword) ||
+                                c.type.toLowerCase().includes(keyword)
+                            );
+                        });
+                    }
+
+                    const totalPages = Math.max(1, Math.ceil(allMyComplaints.length/rowsPerPage));
+                    currentPage = resetPage ? 1 : Math.min(Math.max(1, currentPage), totalPages);
+                    renderTable();
+                }
+
+                function loadComplaints(options){
+                    const preserveState = Boolean(options && options.preserveState);
+                    if(isLoadingComplaints) return;
+                    isLoadingComplaints = true;
+
+                    fetch("/api/student/complaints", { credentials: "same-origin", cache: "no-store" })
 
                     .then(response=>{
 
@@ -452,12 +484,14 @@
 
                         }
 
-                        originalMyComplaints=data.complaints;
-                        allMyComplaints=[...originalMyComplaints];
-
-                        currentPage=1;
-
-                        renderTable();
+                        const nextComplaints = data.complaints || [];
+                        const snapshot = JSON.stringify(nextComplaints);
+                        if(preserveState && snapshot === lastComplaintsSnapshot){
+                            return;
+                        }
+                        lastComplaintsSnapshot = snapshot;
+                        originalMyComplaints = nextComplaints;
+                        applyComplaintFilter(!preserveState);
 
                     })
 
@@ -465,21 +499,26 @@
 
                         console.error(error);
 
-                        document.getElementById("myComplaints").innerHTML=`
+                        if(!preserveState){
+                            document.getElementById("myComplaints").innerHTML=`
 
-                        <tr>
+                            <tr>
 
-                            <td colspan="7"
-                                style="text-align:center;color:red;">
+                                <td colspan="7"
+                                    style="text-align:center;color:red;">
 
-                                ${error.message || "Failed to load complaints."}
+                                    ${escapeText(error.message || "Failed to load complaints.")}
 
-                            </td>
+                                </td>
 
-                        </tr>
+                            </tr>
 
-                        `;
+                            `;
+                        }
 
+                    })
+                    .finally(()=>{
+                        isLoadingComplaints = false;
                     });
 
                 }
@@ -519,41 +558,7 @@
                 document.getElementById("studentSearchInput")
                 .addEventListener("keyup",function(){
 
-                    const keyword=this.value.trim().toLowerCase();
-
-                    if(keyword===""){
-
-                        allMyComplaints=[...originalMyComplaints];
-
-                    }else{
-
-                        allMyComplaints=originalMyComplaints.filter(function(c){
-
-                            return (
-
-                                c.complaintId.toLowerCase().includes(keyword) ||
-
-                                c.category.toLowerCase().includes(keyword) ||
-
-                                c.description.toLowerCase().includes(keyword) ||
-
-                                c.assignedStaff.toLowerCase().includes(keyword) ||
-
-                                c.date.toLowerCase().includes(keyword) ||
-
-                                c.status.toLowerCase().includes(keyword) ||
-
-                                c.type.toLowerCase().includes(keyword)
-
-                            );
-
-                        });
-
-                    }
-
-                    currentPage=1;
-
-                    renderTable();
+                    applyComplaintFilter(true);
 
                 });
 
@@ -572,7 +577,6 @@
                         loadBtn.innerHTML =
                             '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
 
-                        // Sirf complaints reload karega
                         loadComplaints();
 
                         setTimeout(function(){
@@ -589,12 +593,23 @@
                 }
 
                 // =====================================
-                // Initial Load
+                // Initial Load & Auto Refresh
                 // =====================================
 
                 loadComplaints();
 
-                setInterval(loadComplaints, 15000);
+                setInterval(function(){
+                    loadComplaints({ preserveState: true });
+                }, 15000);
+                document.addEventListener("visibilitychange", function(){
+                    if(!document.hidden) loadComplaints({ preserveState: true });
+                });
+                window.addEventListener("focus", function(){
+                    loadComplaints({ preserveState: true });
+                });
+                window.addEventListener("pageshow", function(event){
+                    if(event.persisted) loadComplaints({ preserveState: true });
+                });
 
                 // =====================================
                 // Success / Error Popup

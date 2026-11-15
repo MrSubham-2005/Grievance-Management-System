@@ -1,8 +1,8 @@
 // Case activity timeline. Every raise, assignment and status change writes one row.
 const pool = require('./db');
 
-async function recordEvent(complaintId, kind, message, actor = null) {
-  await pool.query(
+async function recordEvent(complaintId, kind, message, actor = null, db = pool) {
+  await db.query(
     `INSERT INTO complaint_event (complaint_id, kind, message, actor) VALUES ($1,$2,$3,$4)`,
     [complaintId, kind, message, actor]
   );

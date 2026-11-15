@@ -460,7 +460,7 @@ body {
    ========================================================================== */
 .dashboard-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+    grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));
     gap:1.5rem;
     margin-bottom:2.5rem;
 }
@@ -852,6 +852,95 @@ body {
     transform: translateY(0); /* Snappy feedback on click */
 }
 
+.info-tooltip-btn {
+    background: transparent;
+    border: 0;
+    padding: 4px;
+    margin-left: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: 24px;
+    min-height: 24px;
+    border-radius: 9999px;
+    color: #2563eb;
+    cursor: pointer;
+    vertical-align: middle;
+    touch-action: manipulation;
+    --interest-delay-start: 0.15s;
+    interest-delay-start: var(--interest-delay-start);
+    --interest-delay-end: 0.12s;
+    interest-delay-end: var(--interest-delay-end);
+    transition: color 0.2s ease-in-out, transform 0.2s ease, background-color 0.2s ease;
+}
+
+.info-tooltip-btn .added-by-icon {
+    margin-left: 0;
+    pointer-events: none;
+}
+
+.info-tooltip-btn:hover {
+    color: #1d4ed8;
+    background-color: rgba(37, 99, 235, 0.08);
+    transform: translateY(-1px);
+}
+
+.info-tooltip-btn:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.gms-tooltip {
+    display: none;
+    background: #0f172a;
+    color: #f8fafc;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 8px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
+    max-width: 280px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: left;
+    z-index: 2000;
+}
+
+.gms-tooltip:is(:popover-open, .\:popover-open, .gms-tooltip-open) {
+    display: block;
+}
+
+.gms-tooltip.gms-tooltip--js-pos {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+}
+
+@supports (position-area: block-start) {
+    .gms-tooltip:not(.gms-tooltip--js-pos)[popover] {
+        inset: auto;
+        margin: 0 0 8px 0;
+        position-area: block-start;
+        position-try-fallbacks: flip-block, flip-inline;
+    }
+}
+
+.gms-tooltip-row + .gms-tooltip-row {
+    margin-top: 2px;
+}
+
+.gms-tooltip-label {
+    font-weight: 600;
+    color: #cbd5e1;
+}
+
+.gms-tooltip-value {
+    color: #ffffff;
+    font-weight: 500;
+}
+
 /* Badges with Glowing Real-time Pulsing Dots */
 .badge {
     padding: 0.4rem 0.75rem;
@@ -873,23 +962,23 @@ body {
     display: inline-block;
 }
 
-/* 1. PENDING (Soft Yellow) */
+/* 1. PENDING (Soft Yellow, WCAG AA contrast text) */
 .badge-pending {
     background-color: #fef3c7;
-    color: #d97706;
+    color: #92400e;
 }
 .badge-pending::before {
-    background-color: #d97706;
+    background-color: #b45309;
     animation: livePulseGlow 1.6s infinite ease-in-out;
 }
 
 /* 2. PENDING STAFF (Distinct Orange - Alag dikhne ke liye) */
 .badge-pending-staff {
     background-color: #ffedd5; /* Light Orange */
-    color: #ea580c;            /* Dark Orange Text */
+    color: #c2410c;            /* Dark Orange Text */
 }
 .badge-pending-staff::before {
-    background-color: #ea580c;
+    background-color: #c2410c;
     animation: livePulseGlow 1.6s infinite ease-in-out;
 }
 
@@ -926,6 +1015,58 @@ body {
 .badge-overdue {
     background-color: #fee2e2;
     color: #991b1b;
+}
+
+/* Priority Badges */
+.priority-badge::before {
+    display: none;
+}
+
+.badge-priority-high {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-priority-medium {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.badge-priority-low {
+    background-color: #e0f2fe;
+    color: #0369a1;
+}
+
+.complaint-desc-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    max-width: 260px;
+    vertical-align: middle;
+}
+
+.complaint-desc-cell .info-tooltip-btn {
+    margin-left: 0;
+    flex-shrink: 0;
+}
+
+.complaint-desc-preview {
+    display: inline-block;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+
+@media (forced-colors: active) {
+    .card,
+    .badge {
+        border: 1px solid CanvasText;
+    }
 }
 
 /* Case activity timeline */
@@ -1194,6 +1335,8 @@ body {
     box-shadow: 0 6px 18px rgba(37, 99, 235, 0.25);
 }
 
+.btn:disabled,
+.btn.disabled,
 .pagination .btn:disabled,
 .pagination .btn.disabled {
     background: #f1f5f9 !important;
@@ -1307,6 +1450,61 @@ select.form-control {
 .field-readonly:focus {
     border-color: var(--border-color);
     box-shadow: none;
+}
+
+.form-control:focus-visible {
+    outline: 3px solid #0b57d0;
+    outline-offset: 2px;
+}
+
+select.form-control:is(:user-invalid, .user-invalid-fallback) {
+    border-color: #d93025;
+    background-color: #fef2f2;
+}
+
+.error-msg {
+    display: none;
+    color: #b91c1c;
+    font-size: 0.85rem;
+    margin-top: 0.4rem;
+}
+
+select.form-control:is(:user-invalid, .user-invalid-fallback) + .error-msg {
+    display: block;
+}
+
+.form-feedback {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 1.25rem;
+    border: 1px solid transparent;
+}
+
+.form-feedback[hidden] {
+    display: none !important;
+}
+
+.form-feedback--success {
+    background-color: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #065f46;
+}
+
+.form-feedback--error {
+    background-color: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+
+.form-feedback--info {
+    background-color: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1e40af;
 }
 
 .char-counter {
@@ -1631,33 +1829,47 @@ select.form-control {
    11. AI DUPLICATE COMPLAINT POPUP
    ========================================================== */
 
-.duplicate-popup{
+dialog.duplicate-popup{
 
-    position: fixed;
+    width: calc(100% - 40px);
 
-    inset: 0;
+    max-width: 560px;
+
+    margin: auto;
+
+    padding: 0;
+
+    border: none;
+
+    border-radius: 18px;
+
+    background: transparent;
+
+    overflow: visible;
+
+}
+
+dialog.duplicate-popup:modal{
+
+    overscroll-behavior: contain;
+
+}
+
+dialog.duplicate-popup[open]{
+
+    animation: popupFade .25s ease;
+
+}
+
+dialog.duplicate-popup::backdrop{
 
     background: rgba(15,23,42,.55);
 
     backdrop-filter: blur(4px);
 
-    display: none;
+    overflow: hidden;
 
-    justify-content: center;
-
-    align-items: center;
-
-    z-index: 9999;
-
-    padding: 20px;
-
-}
-
-.duplicate-popup.show{
-
-    display: flex;
-
-    animation: popupFade .25s ease;
+    overscroll-behavior: contain;
 
 }
 

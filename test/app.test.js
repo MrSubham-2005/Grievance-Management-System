@@ -35,8 +35,20 @@ test('admin CSV export refuses anonymous requests', async () => {
   assert.equal(res.status, 401);
 });
 
+const fs = require('node:fs');
+const path = require('node:path');
+
 test('the home page redirects to the portal landing page', async () => {
   const res = await fetch(`${base}/`, { redirect: 'manual' });
   assert.equal(res.status, 302);
   assert.equal(res.headers.get('location'), '/Home.html');
+});
+
+test('server configuration defaults exclusively to port 4000 without port 3000 references', () => {
+  assert.equal(app.DEFAULT_PORT, 4000);
+  const root = path.join(__dirname, '..');
+  for (const rel of ['server/app.js', '.env.example', 'Dockerfile', 'README.md']) {
+    const content = fs.readFileSync(path.join(root, rel), 'utf8');
+    assert.doesNotMatch(content, /\b3000\b/, `${rel} should not reference port 3000`);
+  }
 });

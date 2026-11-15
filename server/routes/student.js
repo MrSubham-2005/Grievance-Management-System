@@ -6,18 +6,19 @@ const { requireRole, wrap } = require('../middleware');
 const { analyzeComplaint, aiConfigured, CATEGORIES } = require('../ai');
 const { deadlineFor, isOverdue } = require('../sla');
 const { recordEvent, timelineFor } = require('../timeline');
+const {
+  formatComplaintId,
+  complaintIdCandidates,
+  resolveComplaintId,
+  nextComplaintId,
+} = require('../complaint-id');
+const { nextId, withIdLock } = require('../id-generator');
+const { fetchRecentComplaints } = require('../recent-complaints');
 
 const router = express.Router();
 router.use(requireRole('student'));
 
 const fail = (res, status, message) => res.status(status).json({ error: message });
-
-async function nextId(table, column, prefix) {
-  const { rows } = await pool.query(
-    `SELECT COALESCE(MAX(CAST(SUBSTRING(${column} FROM ${prefix.length + 1}) AS INTEGER)), 0) AS n FROM ${table}`
-  );
-  return `${prefix}${String(Number(rows[0].n) + 1).padStart(4, '0')}`;
-}
 
 router.get('/profile', wrap(async (req, res) => {
   const { rows } = await pool.query(
@@ -28,41 +29,32 @@ router.get('/profile', wrap(async (req, res) => {
   res.json({ studentId: rows[0].student_id, studentName: rows[0].student_name, mobile: rows[0].mobile, email: rows[0].email });
 }));
 
-// Dashboard payload: counts plus the five most recent complaints.
+// Dashboard payload: student summary counts plus the global five most recent complaints.
 router.get('/dashboard', wrap(async (req, res) => {
-  const counts = await pool.query(
-    `SELECT COUNT(*)::int AS total,
-            COUNT(*) FILTER (WHERE c.status = 'Pending')::int AS pending,
-            COUNT(*) FILTER (WHERE c.status = 'In Progress')::int AS in_progress,
-            COUNT(*) FILTER (WHERE c.status = 'Resolved')::int AS resolved
-     FROM complaint c JOIN complaint_member m ON m.complaint_id = c.complaint_id AND m.student_id = $1`,
-    [req.user.id]
-  );
-  const recent = await pool.query(
-    `SELECT c.complaint_id, c.category, c.description, c.priority, c.status, c.created_at,
-            c.student_id, s.student_name
-     FROM complaint c
-     JOIN complaint_member m ON m.complaint_id = c.complaint_id AND m.student_id = $1
-     JOIN student s ON s.student_id = c.student_id
-     ORDER BY c.created_at DESC LIMIT 5`,
-    [req.user.id]
-  );
-  const c = counts.rows[0];
+  res.set('Cache-Control', 'no-store');
+  const [counts, recentComplaints] = await Promise.all([
+    pool.query(
+      `SELECT COUNT(*)::int AS total_complaints,
+              COUNT(*) FILTER (WHERE status IN ('Pending', 'Assigned'))::int AS pending_complaints,
+              COUNT(*) FILTER (WHERE status = 'In Progress')::int AS in_progress_complaints,
+              COUNT(*) FILTER (WHERE status = 'Resolved')::int AS resolved_complaints
+       FROM complaint
+       WHERE student_id = $1`,
+      [req.user.id]
+    ),
+    fetchRecentComplaints(pool),
+  ]);
+  const c = counts.rows[0] || {};
   res.json({
-    totalComplaints: c.total,
-    pendingComplaints: c.pending,
-    inProgressComplaints: c.in_progress,
-    resolvedComplaints: c.resolved,
-    recentComplaints: recent.rows.map((r) => ({
-      complaintId: r.complaint_id,
-      studentId: r.student_id,
-      studentName: r.student_name,
-      category: r.category,
-      description: r.description,
-      priority: r.priority,
-      status: r.status,
-      date: new Date(r.created_at).toLocaleDateString('en-IN'),
-    })),
+    totalComplaints: Number(c.total_complaints ?? c.total ?? 0),
+    pendingComplaints: Number(c.pending_complaints ?? c.pending ?? 0),
+    inProgressComplaints: Number(c.in_progress_complaints ?? c.in_progress ?? 0),
+    resolvedComplaints: Number(c.resolved_complaints ?? c.resolved ?? 0),
+    total_complaints: Number(c.total_complaints ?? c.total ?? 0),
+    pending_complaints: Number(c.pending_complaints ?? c.pending ?? 0),
+    in_progress_complaints: Number(c.in_progress_complaints ?? c.in_progress ?? 0),
+    resolved_complaints: Number(c.resolved_complaints ?? c.resolved ?? 0),
+    recentComplaints,
   });
 }));
 
@@ -70,7 +62,7 @@ router.get('/dashboard', wrap(async (req, res) => {
 router.get('/stats', wrap(async (req, res) => {
   const { rows } = await pool.query(
     `SELECT COUNT(*)::int AS total,
-            COUNT(*) FILTER (WHERE status = 'Pending')::int AS pending,
+            COUNT(*) FILTER (WHERE status IN ('Pending', 'Assigned'))::int AS pending,
             COUNT(*) FILTER (WHERE status = 'In Progress')::int AS in_progress,
             COUNT(*) FILTER (WHERE status = 'Resolved')::int AS resolved
      FROM complaint WHERE student_id = $1`,
@@ -97,15 +89,133 @@ router.post('/analyze', wrap(async (req, res) => {
   }
   const analysis = await analyzeComplaint(description, await openComplaints());
   const rank = { High: 0, Medium: 1, Low: 2 };
-  const top = analysis.issues.reduce((a, b) => (rank[b.priority] < rank[a.priority] ? b : a), analysis.issues[0] || { category: 'Other', priority: 'Medium' });
+  const top = analysis.issues.reduce(
+    (a, b) => (rank[b.priority] < rank[a.priority] ? b : a),
+    analysis.issues[0] || { category: '', priority: 'Medium' }
+  );
+  const validCategory = !analysis.spam && CATEGORIES.includes(top.category) ? top.category : '';
   res.json({
     ...analysis,
     description,
     message: analysis.spam ? (analysis.spamReason || 'This complaint looks like spam and was not submitted.') : analysis.verdict,
-    category: analysis.spam ? '' : top.category,
+    category: validCategory,
     priority: analysis.spam ? '' : top.priority,
   });
 }));
+
+async function fetchJoinCount(db, complaintId) {
+  const { rows } = await db.query(
+    `SELECT COUNT(DISTINCT cm.student_id) FILTER (WHERE cm.student_id <> c.student_id)::int AS join_count
+     FROM public.complaint c
+     LEFT JOIN public.complaint_member cm ON cm.complaint_id = c.complaint_id
+     WHERE c.complaint_id = $1
+     GROUP BY c.complaint_id`,
+    [complaintId]
+  );
+  return rows[0] ? Number(rows[0].join_count) || 0 : 0;
+}
+
+async function joinExistingComplaint(rawComplaintId, studentId) {
+  const actualJoinId = await resolveComplaintId(pool, rawComplaintId);
+  const displayJoinId = formatComplaintId(rawComplaintId) || rawComplaintId;
+  if (!actualJoinId) {
+    return { status: 404, error: `Complaint ${displayJoinId} does not exist.` };
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Lock the complaint row so concurrent join attempts by the same student serialize cleanly.
+    const target = await client.query(
+      `SELECT complaint_id, student_id, status
+       FROM public.complaint
+       WHERE complaint_id = $1
+       FOR UPDATE`,
+      [actualJoinId]
+    );
+    if (!target.rowCount) {
+      await client.query('ROLLBACK');
+      return { status: 404, error: `Complaint ${displayJoinId} does not exist.` };
+    }
+
+    const row = target.rows[0];
+    const formattedId = formatComplaintId(row.complaint_id);
+
+    // Ensure target complaint is active before evaluating membership/joining.
+    if (row.status === 'Resolved') {
+      await client.query('ROLLBACK');
+      return { status: 409, error: `Complaint ${formattedId} is already resolved.` };
+    }
+
+    // Compare original complaint owner ID with the authenticated student ID first.
+    if (row.student_id === studentId) {
+      await client.query('ROLLBACK');
+      return {
+        status: 409,
+        error: 'You are the original creator of this complaint.',
+        message: 'You are the original creator of this complaint.',
+      };
+    }
+
+    const existing = await client.query(
+      `SELECT COUNT(*)::int AS already_joined FROM public.complaint_member WHERE complaint_id = $1 AND student_id = $2`,
+      [actualJoinId, studentId]
+    );
+    const alreadyJoined = Number(existing.rows[0] && existing.rows[0].already_joined) || 0;
+    if (alreadyJoined > 0) {
+      await client.query('ROLLBACK');
+      return {
+        status: 409,
+        error: 'You have already joined this complaint.',
+        message: 'You have already joined this complaint.',
+      };
+    }
+
+    await client.query(
+      `INSERT INTO public.complaint_member (complaint_id, student_id) VALUES ($1, $2)`,
+      [actualJoinId, studentId]
+    );
+    const reportedBy = await fetchJoinCount(client, actualJoinId);
+    await client.query('COMMIT');
+    return {
+      status: 201,
+      ok: true,
+      complaintId: formattedId,
+      joined: true,
+      reportedBy,
+      message: 'You have successfully joined this complaint.',
+    };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    if (err && err.code === '23505') {
+      const reportedBy = await fetchJoinCount(pool, actualJoinId).catch(() => undefined);
+      return {
+        status: 409,
+        error: 'You have already joined this complaint.',
+        ...(reportedBy !== undefined ? { reportedBy } : {}),
+      };
+    }
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+function sendJoinResponse(res, outcome) {
+  if (outcome.error) {
+    return res.status(outcome.status).json({
+      error: outcome.error,
+      ...(outcome.reportedBy !== undefined ? { reportedBy: outcome.reportedBy } : {}),
+    });
+  }
+  return res.status(outcome.status).json({
+    ok: true,
+    complaintId: outcome.complaintId,
+    joined: true,
+    reportedBy: outcome.reportedBy,
+    message: outcome.message,
+  });
+}
 
 // Duplicate check for the popup: returns the open complaint the AI matched, with its real details.
 router.post('/check-duplicate', wrap(async (req, res) => {
@@ -116,25 +226,35 @@ router.post('/check-duplicate', wrap(async (req, res) => {
   }
   const open = await openComplaints();
   const analysis = await analyzeComplaint(description, open);
-  const match = open.find((c) => c.complaint_id === analysis.duplicateOf);
+  const dupCandidates = complaintIdCandidates(analysis.duplicateOf);
+  const match = open.find((c) => dupCandidates.includes(c.complaint_id));
   if (!match) return res.json({ duplicate: false });
   const detail = await pool.query(
     `SELECT c.complaint_id, c.category, c.description, c.status,
-            (SELECT COUNT(*)::int FROM complaint_member m WHERE m.complaint_id = c.complaint_id) AS reported_by
-     FROM complaint c WHERE c.complaint_id = $1`,
+            COUNT(DISTINCT m.student_id) FILTER (WHERE m.student_id <> c.student_id)::int AS reported_by
+     FROM public.complaint c
+     LEFT JOIN public.complaint_member m ON m.complaint_id = c.complaint_id
+     WHERE c.complaint_id = $1
+     GROUP BY c.complaint_id`,
     [match.complaint_id]
   );
   const d = detail.rows[0];
+  if (!d) return res.json({ duplicate: false });
   res.json({
     duplicate: true,
-    complaintId: d.complaint_id,
+    complaintId: formatComplaintId(d.complaint_id),
     similarity: 100,
     category: d.category,
     description: d.description,
-    reportedBy: d.reported_by,
+    reportedBy: Number(d.reported_by) || 0,
     status: d.status,
     reason: analysis.duplicateReason,
   });
+}));
+
+router.post('/complaints/:id/join', wrap(async (req, res) => {
+  const outcome = await joinExistingComplaint(req.params.id, req.user.id);
+  return sendJoinResponse(res, outcome);
 }));
 
 // Raise a complaint. Saves real data, after the AI verdict is shown to the student.
@@ -143,20 +263,14 @@ router.post('/complaints', wrap(async (req, res) => {
   const category = String(req.body.complaint_category || req.body.category || '').trim();
   const priority = String(req.body.priority || 'Medium').trim();
   const joining = String(req.body.joinComplaint || '') === 'true';
-  const joinId = joining ? String(req.body.existingComplaintId || req.body.joinComplaintId || '').trim() : '';
+  const joinId = joining
+    ? String(req.body.existingComplaintId || req.body.joinComplaintId || req.body.complaintId || '').trim()
+    : '';
 
-  if (joinId) {
-    const target = await pool.query(
-      `SELECT complaint_id, status FROM complaint WHERE complaint_id = $1`,
-      [joinId]
-    );
-    if (!target.rowCount) return fail(res, 404, `Complaint ${joinId} does not exist.`);
-    if (target.rows[0].status === 'Resolved') return fail(res, 409, `Complaint ${joinId} is already resolved.`);
-    await pool.query(
-      `INSERT INTO complaint_member (complaint_id, student_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`,
-      [joinId, req.user.id]
-    );
-    return res.status(201).json({ ok: true, complaintId: joinId, joined: true });
+  if (joining) {
+    if (!joinId) return fail(res, 400, 'Choose a complaint to join.');
+    const outcome = await joinExistingComplaint(joinId, req.user.id);
+    return sendJoinResponse(res, outcome);
   }
 
   if (description.length < 10) return fail(res, 400, 'Describe the problem in at least 10 characters.');
@@ -170,35 +284,38 @@ router.post('/complaints', wrap(async (req, res) => {
     if (raw && typeof raw === 'object' && raw.description === description) analysis = raw;
   } catch (_) { analysis = null; }
 
-  const id = await nextId('complaint', 'complaint_id', 'CMP');
-  await pool.query(
-    `INSERT INTO complaint (complaint_id, student_id, category, description, priority, status, ai_analysis, due_at)
-     VALUES ($1,$2,$3,$4,$5,'Pending',$6,$7)`,
-    [id, req.user.id, category, description, priority, analysis, deadlineFor(priority)]
-  );
-  await pool.query(
-    `INSERT INTO complaint_member (complaint_id, student_id) VALUES ($1,$2)`,
-    [id, req.user.id]
-  );
-  await recordEvent(id, 'raised', `Complaint raised with ${priority} priority.`, req.user.id);
+  const id = await withIdLock(pool, 'complaint', async (client) => {
+    const newId = await nextComplaintId(client);
+    await client.query(
+      `INSERT INTO complaint (complaint_id, student_id, category, description, priority, status, ai_analysis, due_at)
+       VALUES ($1,$2,$3,$4,$5,'Pending',$6,$7)`,
+      [newId, req.user.id, category, description, priority, analysis, deadlineFor(priority)]
+    );
+    await recordEvent(newId, 'raised', `Complaint raised with ${priority} priority.`, req.user.id, client);
+    return newId;
+  });
   res.status(201).json({ ok: true, complaintId: id });
 }));
 
-// The student's own complaints, with their live status.
+// The student's own or joined complaints, with their live status directly from public.complaint.
 router.get('/complaints', wrap(async (req, res) => {
+  res.set('Cache-Control', 'no-store');
   const { rows } = await pool.query(
-    `SELECT c.complaint_id, c.category, c.description, c.priority, c.status, c.resolution,
-            c.created_at, c.updated_at, c.ai_analysis, c.due_at, s.staff_name
-     FROM complaint c
-     JOIN complaint_member m ON m.complaint_id = c.complaint_id AND m.student_id = $1
-     LEFT JOIN staff s ON s.staff_id = c.assigned_staff_id
+    `SELECT DISTINCT
+            c.complaint_id, c.student_id, c.category, c.description, c.priority, c.status, c.resolution,
+            c.created_at, c.updated_at, c.ai_analysis, c.due_at, c.assigned_staff_id, s.staff_name
+     FROM public.complaint c
+     LEFT JOIN public.complaint_member cm ON cm.complaint_id = c.complaint_id
+     LEFT JOIN public.staff s ON s.staff_id = c.assigned_staff_id
+     WHERE c.student_id = $1
+        OR cm.student_id = $1
      ORDER BY c.created_at DESC`,
     [req.user.id]
   );
   res.json({
     complaints: rows.map((r) => ({
-      complaintId: r.complaint_id,
-      type: 'Complaint',
+      complaintId: formatComplaintId(r.complaint_id),
+      type: r.student_id === req.user.id ? 'Owner' : 'Joined',
       category: r.category,
       description: r.description,
       priority: r.priority,
@@ -214,31 +331,37 @@ router.get('/complaints', wrap(async (req, res) => {
   });
 }));
 
-// Case timeline for one complaint. Only members of that complaint can read it.
+// Case timeline for one complaint. Only owners or joined members of that complaint can read it.
 router.get('/complaints/:id/timeline', wrap(async (req, res) => {
+  const actualId = await resolveComplaintId(pool, req.params.id);
+  const displayId = formatComplaintId(req.params.id) || req.params.id;
+  if (!actualId) return fail(res, 404, `Complaint ${displayId} was not found on your account.`);
   const member = await pool.query(
-    'SELECT 1 FROM complaint_member WHERE complaint_id = $1 AND student_id = $2',
-    [req.params.id, req.user.id]
+    `SELECT 1 FROM public.complaint c
+     WHERE c.complaint_id = $1
+       AND (c.student_id = $2 OR EXISTS (SELECT 1 FROM public.complaint_member cm WHERE cm.complaint_id = c.complaint_id AND cm.student_id = $2))`,
+    [actualId, req.user.id]
   );
-  if (!member.rowCount) return fail(res, 404, `Complaint ${req.params.id} was not found on your account.`);
-  res.json({ events: await timelineFor(req.params.id) });
+  if (!member.rowCount) return fail(res, 404, `Complaint ${formatComplaintId(actualId)} was not found on your account.`);
+  res.json({ events: await timelineFor(actualId) });
 }));
 
 // Resolved complaints this student can rate, with the staff member who handled each.
 router.get('/feedback-options', wrap(async (req, res) => {
   const { rows } = await pool.query(
-    `SELECT c.complaint_id, c.category, c.assigned_staff_id, s.staff_name
-     FROM complaint c
-     JOIN complaint_member m ON m.complaint_id = c.complaint_id AND m.student_id = $1
-     LEFT JOIN staff s ON s.staff_id = c.assigned_staff_id
-     WHERE c.status = 'Resolved'
+    `SELECT DISTINCT c.complaint_id, c.category, c.assigned_staff_id, s.staff_name, c.updated_at
+     FROM public.complaint c
+     LEFT JOIN public.complaint_member cm ON cm.complaint_id = c.complaint_id
+     LEFT JOIN public.staff s ON s.staff_id = c.assigned_staff_id
+     WHERE (c.student_id = $1 OR cm.student_id = $1)
+       AND c.status = 'Resolved'
        AND NOT EXISTS (SELECT 1 FROM feedback f WHERE f.complaint_id = c.complaint_id AND f.student_id = $1)
      ORDER BY c.updated_at DESC`,
     [req.user.id]
   );
   res.json({
     complaints: rows.map((r) => ({
-      complaintId: r.complaint_id,
+      complaintId: formatComplaintId(r.complaint_id),
       category: r.category,
       staffId: r.assigned_staff_id || '',
       staffName: r.staff_name || 'Not assigned',
@@ -246,36 +369,46 @@ router.get('/feedback-options', wrap(async (req, res) => {
   });
 }));
 
-// Feedback is allowed only once a complaint is resolved, by a student who is a member of it.
+// Feedback is allowed only once a complaint is resolved, by a student who owns or joined it.
 router.post('/feedback', wrap(async (req, res) => {
   const complaintId = String(req.body.complaint_id || '').trim();
   const rating = Number(req.body.rating);
   const review = String(req.body.review || req.body['review-message'] || '').trim();
   if (!complaintId) return fail(res, 400, 'Choose the complaint you are rating.');
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) return fail(res, 400, 'Rating must be a whole number from 1 to 5.');
+  const actualComplaintId = await resolveComplaintId(pool, complaintId);
+  if (!actualComplaintId) return fail(res, 404, `You are not a member of complaint ${formatComplaintId(complaintId) || complaintId}.`);
   const { rows } = await pool.query(
     `SELECT c.complaint_id, c.category, c.status, c.assigned_staff_id
-     FROM complaint c JOIN complaint_member m ON m.complaint_id = c.complaint_id AND m.student_id = $2
-     WHERE c.complaint_id = $1`,
-    [complaintId, req.user.id]
+     FROM public.complaint c
+     WHERE c.complaint_id = $1
+       AND (c.student_id = $2 OR EXISTS (SELECT 1 FROM public.complaint_member cm WHERE cm.complaint_id = c.complaint_id AND cm.student_id = $2))`,
+    [actualComplaintId, req.user.id]
   );
-  if (!rows[0]) return fail(res, 404, `You are not a member of complaint ${complaintId}.`);
+  const formattedId = formatComplaintId(actualComplaintId);
+  if (!rows[0]) return fail(res, 404, `You are not a member of complaint ${formattedId}.`);
   if (rows[0].status !== 'Resolved') return fail(res, 409, 'You can rate a complaint only after it is resolved.');
-  const dup = await pool.query('SELECT 1 FROM feedback WHERE complaint_id=$1 AND student_id=$2', [complaintId, req.user.id]);
-  if (dup.rowCount) return fail(res, 409, 'You have already rated this complaint.');
-  const id = await nextId('feedback', 'feedback_id', 'FB');
-  await pool.query(
-    `INSERT INTO feedback (feedback_id, complaint_id, student_id, staff_id, category, rating, review)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-    [id, complaintId, req.user.id, rows[0].assigned_staff_id, rows[0].category, rating, review]
-  );
-  if (rows[0].assigned_staff_id) {
-    await pool.query(
-      `UPDATE staff SET rating = (SELECT ROUND(AVG(rating)::numeric, 2) FROM feedback WHERE staff_id = $1) WHERE staff_id = $1`,
-      [rows[0].assigned_staff_id]
+  const outcome = await withIdLock(pool, 'feedback', async (client) => {
+    const dup = await client.query('SELECT 1 FROM feedback WHERE complaint_id=$1 AND student_id=$2', [actualComplaintId, req.user.id]);
+    if (dup.rowCount) {
+      return { error: { status: 409, message: 'You have already rated this complaint.' } };
+    }
+    const id = await nextId('feedback', 'feedback_id', 'FB', client);
+    await client.query(
+      `INSERT INTO feedback (feedback_id, complaint_id, student_id, staff_id, category, rating, review)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [id, actualComplaintId, req.user.id, rows[0].assigned_staff_id, rows[0].category, rating, review]
     );
-  }
-  res.status(201).json({ ok: true, feedbackId: id });
+    if (rows[0].assigned_staff_id) {
+      await client.query(
+        `UPDATE staff SET rating = (SELECT ROUND(AVG(rating)::numeric, 2) FROM feedback WHERE staff_id = $1) WHERE staff_id = $1`,
+        [rows[0].assigned_staff_id]
+      );
+    }
+    return { id };
+  });
+  if (outcome.error) return fail(res, outcome.error.status, outcome.error.message);
+  res.status(201).json({ ok: true, feedbackId: outcome.id });
 }));
 
 router.post('/password', wrap(async (req, res) => {
@@ -285,6 +418,7 @@ router.post('/password', wrap(async (req, res) => {
   if (!current || !next) return fail(res, 400, 'Enter your current and new password.');
   if (next !== confirm) return fail(res, 400, 'The new passwords do not match.');
   if (next.length < 6) return fail(res, 400, 'Password must be at least 6 characters.');
+  if (current === next) return fail(res, 400, 'New Password cannot be the same as Current Password');
   const { rows } = await pool.query('SELECT password FROM student WHERE student_id = $1', [req.user.id]);
   if (!rows[0] || !(await bcrypt.compare(current, rows[0].password))) {
     return fail(res, 401, 'Your current password is wrong.');

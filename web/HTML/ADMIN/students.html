@@ -509,6 +509,7 @@
 
                             return (
                                 s.studentId.toLowerCase().includes(keyword) ||
+                                s.studentId.replace(/-/g, "").toLowerCase().includes(keyword) ||
                                 s.studentName.toLowerCase().includes(keyword) ||
                                 s.mobile.toLowerCase().includes(keyword) ||
                                 s.email.toLowerCase().includes(keyword) ||

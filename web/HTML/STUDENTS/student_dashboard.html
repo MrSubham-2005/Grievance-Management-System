@@ -182,14 +182,14 @@
                     <table class="custom-table">
                         <thead>
                             <tr>
-                                <th>Complaint ID</th>
-                                <th>Student ID</th>
-                                <th>Name</th>
-                                <th>Category</th>
-                                <th>Description</th>
-                                <th>Priority</th>
-                                <th>Date</th>
-                                <th>Status</th>
+                                <th scope="col">Complaint ID</th>
+                                <th scope="col">Student ID</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Category</th>
+                                <th scope="col">Description</th>
+                                <th scope="col">Priority</th>
+                                <th scope="col">Date</th>
+                                <th scope="col">Status</th>
                             </tr>
                         </thead>
 
@@ -206,6 +206,9 @@
         </div>
 
         <script src="/gms-api.js"></script>
+        <script src="/gms-tooltip.js"></script>
+        <script src="/gms-date.js"></script>
+        <script src="/gms-recent-complaints.js"></script>
         <script>
 
             document.addEventListener("DOMContentLoaded", function () {
@@ -251,42 +254,12 @@
                 });
 
 
-                // =====================================
-                // Wrap Description
-                // =====================================
-
-                function wrapText(text, limit) {
-
-                    let words = text.split(" ");
-                    let line = "";
-                    let result = "";
-
-                    words.forEach(function(word){
-
-                        if((line + word).length > limit){
-
-                            result += line + "<br>";
-                            line = word + " ";
-
-                        }else{
-
-                            line += word + " ";
-
-                        }
-
-                    });
-
-                    return result + line;
-
-                }
-
-
                 // ===============================
                 // Fetch Dashboard Data
                 // ===============================
 
                 function loadDashboard() {
-                    fetch("/api/student/dashboard")
+                    return fetch("/api/student/dashboard", { credentials: "same-origin", cache: "no-store" })
     
                     .then(response => {
     
@@ -307,82 +280,24 @@
                         // Dashboard Cards
     
                         document.getElementById("studentTotalComplaints").textContent =
-                            data.totalComplaints || 0;
+                            data.totalComplaints ?? data.total_complaints ?? 0;
     
                         document.getElementById("studentPendingComplaints").textContent =
-                            data.pendingComplaints || 0;
+                            data.pendingComplaints ?? data.pending_complaints ?? 0;
     
                         document.getElementById("studentProgressComplaints").textContent =
-                            data.inProgressComplaints || 0;
+                            data.inProgressComplaints ?? data.in_progress_complaints ?? 0;
     
                         document.getElementById("studentResolvedComplaints").textContent =
-                            data.resolvedComplaints || 0;
+                            data.resolvedComplaints ?? data.resolved_complaints ?? 0;
     
     
-                        // Recent Complaints
+                        // Recent Complaints (global latest 5)
     
-                        const tbody = document.getElementById("recentComplaintsBody");
-    
-                        tbody.innerHTML = "";
-    
-                        if (data.recentComplaints && data.recentComplaints.length > 0) {
-    
-                            data.recentComplaints.forEach(function (complaint) {
-    
-                                let badgeClass = "";
-    
-                                switch ((complaint.status || "").toLowerCase()) {
-    
-                                    case "pending":
-                                        badgeClass = "badge-pending";
-                                        break;
-    
-                                    case "assigned":
-                                        badgeClass = "badge-assigned";
-                                        break;
-    
-                                    case "in progress":
-                                        badgeClass = "badge-in-progress";
-                                        break;
-    
-                                    case "resolved":
-                                        badgeClass = "badge-resolved";
-                                        break;
-    
-                                    default:
-                                        badgeClass = "";
-                                }
-    
-                                tbody.innerHTML += `
-                                    <tr>
-                                        <td>${complaint.complaintId}</td>
-                                        <td>${complaint.studentId}</td>
-                                        <td>${complaint.studentName}</td>
-                                        <td>${complaint.category}</td>
-                                        <td>${wrapText(complaint.description || "", 50)}</td>
-                                        <td>${complaint.priority}</td>
-                                        <td>${complaint.date}</td>
-                                        <td>
-                                            <span class="badge ${badgeClass}">
-                                                ${complaint.status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                `;
-    
-                            });
-    
-                        } else {
-    
-                            tbody.innerHTML = `
-                                <tr>
-                                    <td colspan="8" style="text-align:center;">
-                                        No complaints found.
-                                    </td>
-                                </tr>
-                            `;
-    
-                        }
+                        GMSRecentComplaints.render(
+                            document.getElementById("recentComplaintsBody"),
+                            data.recentComplaints || []
+                        );
     
                     })
     
@@ -398,8 +313,16 @@
                     });
                 }
 
-                loadDashboard();
-                setInterval(loadDashboard, 15000);
+                const refreshDashboard = GMSRecentComplaints.createRefreshRunner(loadDashboard);
+                refreshDashboard();
+                setInterval(refreshDashboard, 15000);
+                document.addEventListener("visibilitychange", function () {
+                    if (!document.hidden) refreshDashboard();
+                });
+                window.addEventListener("focus", refreshDashboard);
+                window.addEventListener("pageshow", function (event) {
+                    if (event.persisted) refreshDashboard();
+                });
 
                 // =====================================
                 // Success / Error Popup

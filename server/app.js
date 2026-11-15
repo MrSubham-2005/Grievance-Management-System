@@ -54,10 +54,13 @@ app.use((err, req, res, _next) => {
   res.status(status).send(message);
 });
 
+const DEFAULT_PORT = 4000;
+app.DEFAULT_PORT = DEFAULT_PORT;
+
 module.exports = app;
 
 if (require.main === module) {
-  const port = Number(process.env.PORT) || 3000;
+  const port = Number(process.env.PORT) || DEFAULT_PORT;
   app.listen(port, '0.0.0.0', () => {
     console.log(`GMS running on http://localhost:${port}`);
   });

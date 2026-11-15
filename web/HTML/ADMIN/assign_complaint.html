@@ -225,7 +225,7 @@
                 // Load Pending Complaints
                 // ===========================
 
-                fetch("/api/admin/complaints-to-assign")
+                fetch("/api/admin/complaints-to-assign", { credentials: "same-origin", cache: "no-store" })
 
                 .then(res => res.json())
 
@@ -240,16 +240,12 @@
                     staff.innerHTML =
                         '<option value="" disabled selected>-- Select Staff --</option>';
 
-                    data.complaints.forEach(function (c) {
-
-                        complaint.innerHTML += `
-                            <option
-                                value="${c.complaintId}"
-                                data-category="${c.category}">
-                                ${c.complaintId} - ${c.category}
-                            </option>
-                        `;
-
+                    (data.complaints || []).forEach(function (c) {
+                        const opt = document.createElement("option");
+                        opt.value = c.complaintId;
+                        opt.dataset.category = c.category;
+                        opt.textContent = c.complaintId + " - " + c.category;
+                        complaint.appendChild(opt);
                     });
 
                 });
@@ -265,7 +261,7 @@
                         this.options[this.selectedIndex].dataset.category;
 
                     fetch("/api/admin/staff-for-category?category=" +
-                        encodeURIComponent(category))
+                        encodeURIComponent(category), { credentials: "same-origin", cache: "no-store" })
 
                     .then(res => res.json())
 
@@ -276,7 +272,7 @@
                         staff.innerHTML =
                             '<option value="" disabled selected>-- Select Staff --</option>';
 
-                        if (data.staff.length === 0) {
+                        if (!data.staff || data.staff.length === 0) {
 
                             staff.innerHTML += `
                                 <option disabled>
@@ -288,13 +284,10 @@
                         }
 
                         data.staff.forEach(function (s) {
-
-                            staff.innerHTML += `
-                                <option value="${s.staffId}">
-                                    ${s.staffName} (${s.pending}/${s.total})
-                                </option>
-                            `;
-
+                            const opt = document.createElement("option");
+                            opt.value = s.staffId;
+                            opt.textContent = s.staffName + " (" + s.pending + "/" + s.total + ")";
+                            staff.appendChild(opt);
                         });
 
                     })

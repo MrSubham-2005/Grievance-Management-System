@@ -220,7 +220,7 @@ Fill in `DATABASE_URL` and `SESSION_SECRET`. See [Environment Variables](#-envir
 
 ```bash
 npm run setup-db   # creates the tables and prints a one-time admin signup code
-npm start          # http://localhost:3000
+npm start          # http://localhost:4000
 ```
 
 > [!NOTE]
@@ -228,11 +228,11 @@ npm start          # http://localhost:3000
 
 ### Docker
 
-The included `Dockerfile` builds a production image on `node:22-alpine`. It installs only production dependencies, runs as the non-root `node` user and listens on `PORT` (default 3000).
+The included `Dockerfile` builds a production image on `node:22-alpine`. It installs only production dependencies, runs as the non-root `node` user and listens on `PORT` (default 4000).
 
 ```bash
 docker build -t gms-complaint-portal .
-docker run --rm -p 3000:3000 --env-file .env gms-complaint-portal
+docker run --rm -p 4000:4000 --env-file .env gms-complaint-portal
 ```
 
 The image does not contain `.env`. Pass the variables at run time with `--env-file`. Run `npm run setup-db` once against the database before the first start.
@@ -284,7 +284,7 @@ GMS/
 | `AI_API_KEY` | No | `AIza...` | API key. Leave empty to turn AI analysis off. |
 | `RESEND_API_KEY` | No | `re_...` | Resend API key for status-change emails to students. Leave empty to skip email. A failed send never blocks a status change. |
 | `NOTIFY_FROM` | No | `GMS <complaints@example.edu>` | Sender for status emails. Must be a sender verified in Resend. |
-| `PORT` | No | `3000` | Local port. Defaults to 3000. |
+| `PORT` | No | `4000` | Local port. Defaults to 4000. |
 
 > [!WARNING]
 > Never commit `.env`. It is already listed in `.gitignore`.
@@ -293,7 +293,7 @@ GMS/
 
 ## 📖 API Documentation
 
-**Base URL:** `http://localhost:3000/api` locally, or `https://<your-domain>/api` in production.
+**Base URL:** `http://localhost:4000/api` locally, or `https://<your-domain>/api` in production.
 
 **Authentication:** session cookie set by the login endpoint (`HttpOnly`). Send requests from the same origin, and include the cookie when calling from another client.
 
@@ -322,11 +322,11 @@ GMS/
 ### Example request
 
 ```bash
-curl -i -c cookies.txt -X POST http://localhost:3000/api/auth/student/login \
+curl -i -c cookies.txt -X POST http://localhost:4000/api/auth/student/login \
   -H "Content-Type: application/json" \
   -d '{"email":"student@example.edu","password":"your-password"}'
 
-curl -b cookies.txt http://localhost:3000/api/student/complaints
+curl -b cookies.txt http://localhost:4000/api/student/complaints
 ```
 
 ### Example response
@@ -386,7 +386,7 @@ Screenshots are added after the first production deploy. Replace each path with 
 **Analyse a complaint before filing it**
 
 ```bash
-curl -b cookies.txt -X POST http://localhost:3000/api/student/analyze \
+curl -b cookies.txt -X POST http://localhost:4000/api/student/analyze \
   -H "Content-Type: application/json" \
   -d '{"description":"The streetlight outside block C is broken and the drain next to it is blocked."}'
 ```
@@ -394,7 +394,7 @@ curl -b cookies.txt -X POST http://localhost:3000/api/student/analyze \
 **Download every complaint as a spreadsheet**
 
 ```bash
-curl -b admin-cookies.txt -o complaints.csv http://localhost:3000/api/admin/complaints.csv
+curl -b admin-cookies.txt -o complaints.csv http://localhost:4000/api/admin/complaints.csv
 ```
 
 The same file is available from **Admin → All Complaints → Export CSV**.

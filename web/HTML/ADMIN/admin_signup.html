@@ -194,6 +194,7 @@
 
         </main>
 
+        <script src="/gms-api.js"></script>
         <script>
 
             const form = document.getElementById("gmsSignupForm");
@@ -368,6 +369,12 @@
 
             }
 
+            function showFieldError(target, message) {
+                const icon = document.createElement("i");
+                icon.className = "fa-solid fa-circle-exclamation";
+                target.replaceChildren(icon, document.createTextNode(" " + message));
+            }
+
 
             // =====================================
             // Form Validation
@@ -503,7 +510,38 @@
                 }
 
 
-                // Submitif (valid) { GMS.post("/api/auth/admin/signup", GMS.formData(form)).then(function (d) { alert(d.message || "Admin account created."); GMS.go(d.redirect || "/HTML/ADMIN/admin_login.html"); }).catch(function (err) { alert(err.message); }); } else {
+                // Submit
+                if (valid) {
+
+                    const submitBtn = form.querySelector("button[type='submit']");
+                    submitBtn.disabled = true;
+
+                    GMS.post("/api/auth/admin/signup", GMS.formData(form))
+                        .then(function (response) {
+                            window.location.href = response.redirect || "/HTML/ADMIN/admin_login.html";
+                        })
+                        .catch(function (err) {
+                            submitBtn.disabled = false;
+                            const message = (err && err.message) || "Registration failed. Please try again.";
+                            if (/admin code|secret code/i.test(message)) {
+                                showFieldError(secretCodeError, message);
+                                scrollToError(secretCodeInput);
+                            } else if (/email/i.test(message)) {
+                                showFieldError(emailError, message);
+                                scrollToError(emailInput);
+                            } else if (/mobile/i.test(message)) {
+                                showFieldError(mobileError, message);
+                                scrollToError(mobileInput);
+                            } else if (/password/i.test(message)) {
+                                showFieldError(passwordError, message);
+                                scrollToError(passwordInput);
+                            } else {
+                                showFieldError(secretCodeError, message);
+                                scrollToError(secretCodeInput);
+                            }
+                        });
+
+                } else {
 
                     if (nameError.innerHTML !== "") {
 
@@ -586,7 +624,6 @@
 
         </script>
 
-    <script src="/gms-api.js"></script>
     </body>
 
 </html>

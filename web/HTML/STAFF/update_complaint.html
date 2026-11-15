@@ -135,41 +135,31 @@
 
                 <div class="form-container">
 
-                    <form id="updateForm" method="POST">
+                    <div id="updateFeedback" class="form-feedback" role="status" aria-live="polite" hidden></div>
+
+                    <form id="updateForm" method="POST" novalidate>
 
                         <div class="form-group">
-                            <label class="form-label">Select Complaint ID</label>
-                            <select name="complaint-id" id="complaintId" class="form-control" required>
+                            <label class="form-label" for="complaintId">Select Complaint ID</label>
+                            <select name="complaint-id" id="complaintId" class="form-control" required data-error="complaintIdError">
                                 <option value="" disabled selected>-- Select Complaint --</option>
                             </select>
+                            <div id="complaintIdError" class="error-msg">Please select an eligible complaint ID.</div>
                         </div>
 
                         <div class="form-group">
-                            <label for="complaint-title">Category</label>
+                            <label class="form-label" for="category">Category</label>
                             <input type="text" name="category" id="category" readonly class="form-control field-readonly">
                         </div>
 
                         <div class="form-group">
-                            <label for="complaint-description">Detailed Description</label>
+                            <label class="form-label" for="description">Detailed Description</label>
                             <input type="text" name="description" id="description" readonly class="form-control field-readonly">
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Status</label>
+                            <label class="form-label" for="status">Status</label>
                             <input type="text" name="complaint-status" id="status" readonly class="form-control field-readonly">
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label" for="newStatus">New Status</label>
-                            <select name="status" id="newStatus" class="form-control" required>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Resolved">Resolved</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label" for="resolutionNote">Resolution Note</label>
-                            <textarea name="resolution" id="resolutionNote" class="form-control" rows="4" maxlength="500" placeholder="Describe what was done. Required when resolving."></textarea>
                         </div>
 
                         <!-- BUTTONS -->
@@ -179,7 +169,7 @@
                                 Cancel
                             </a>
 
-                            <button type="submit" class="btn btn-assign">
+                            <button type="submit" id="submitBtn" class="btn btn-assign">
                                 <i class="fa-solid fa-user-check"></i> Update Complaint
                             </button>
 
@@ -234,17 +224,12 @@
                 // Load Staff Profile
                 // ======================================
 
-                fetch("/api/staff/profile")
-
+                fetch("/api/staff/profile", { credentials: "same-origin", cache: "no-store" })
                 .then(res => res.json())
-
                 .then(data => {
 
                     if(data.error){
-
-                        alert(data.error);
                         return;
-
                     }
 
                     document.getElementById("staffName").textContent =
@@ -259,137 +244,246 @@
                     document.getElementById("staffEmail").innerHTML =
                         data.email.replace("@","@<wbr>");
 
-                    document.getElementById("staffRating").textContent = 
+                    document.getElementById("staffRating").textContent =
                         data.rating + " / 5";
 
                 })
-
                 .catch(error => {
-
                     console.error(error);
-
                 });
 
                 // ======================================
-                // Load Assigned Complaints
+                // Update Complaint Form & Selection
                 // ======================================
 
-                let complaints = [];
+                const updateForm = document.getElementById("updateForm");
+                const complaintSelect = document.getElementById("complaintId");
+                const categoryInput = document.getElementById("category");
+                const descriptionInput = document.getElementById("description");
+                const statusInput = document.getElementById("status");
+                const updateFeedback = document.getElementById("updateFeedback");
+                const submitBtn = document.getElementById("submitBtn");
 
-                fetch("/api/staff/complaints")
+                let eligibleComplaints = [];
+                let selectedComplaint = null;
+                let isSubmitting = false;
 
-                .then(res => res.json())
+                function normalizeStatus(value) {
+                    return String(value || "").trim().toLowerCase();
+                }
 
-                .then(data => {
+                // Sync aria-invalid and aria-describedby with :user-invalid on interaction only.
+                const flaggedControls = new WeakSet();
+                function linkControlError(el, shown) {
+                    const errorId = el.dataset.error;
+                    if (!errorId) return;
+                    const ids = (el.getAttribute("aria-describedby") || "")
+                        .split(/\s+/)
+                        .filter(function (id) { return id && id !== errorId; });
+                    if (shown) ids.push(errorId);
+                    if (ids.length) el.setAttribute("aria-describedby", ids.join(" "));
+                    else el.removeAttribute("aria-describedby");
+                }
 
-                    if(data.error){
+                function syncControlAria(el) {
+                    if (!el || !el.matches || !el.matches("select")) return;
+                    const isInvalid = typeof CSS !== "undefined" && CSS.supports && CSS.supports("selector(:user-invalid)")
+                        ? el.matches(":user-invalid")
+                        : el.classList.contains("user-invalid-fallback");
+                    if (isInvalid) {
+                        el.setAttribute("aria-invalid", "true");
+                        linkControlError(el, true);
+                        flaggedControls.add(el);
+                    } else if (flaggedControls.has(el) || el.getAttribute("aria-invalid") !== "true") {
+                        el.setAttribute("aria-invalid", "false");
+                        linkControlError(el, false);
+                        flaggedControls.delete(el);
+                    }
+                }
 
-                        alert(data.error);
+                function resetSelectValidation(el) {
+                    if (!el) return;
+                    el.classList.remove("user-invalid-fallback");
+                    el.setAttribute("aria-invalid", "false");
+                    linkControlError(el, false);
+                    flaggedControls.delete(el);
+                }
+
+                complaintSelect.setAttribute("aria-invalid", "false");
+                complaintSelect.addEventListener("blur", function () { syncControlAria(complaintSelect); });
+                complaintSelect.addEventListener("change", function () {
+                    if (complaintSelect.value) complaintSelect.classList.remove("user-invalid-fallback");
+                    syncControlAria(complaintSelect);
+                });
+
+                function showFeedback(message, kind) {
+                    if (!message) {
+                        updateFeedback.hidden = true;
+                        updateFeedback.className = "form-feedback";
+                        updateFeedback.innerHTML = "";
                         return;
+                    }
+                    const variant = kind === "info"
+                        ? "form-feedback--info"
+                        : "form-feedback--error";
+                    const iconClass = kind === "info"
+                        ? "fa-circle-info"
+                        : "fa-circle-exclamation";
+                    updateFeedback.className = "form-feedback " + variant;
+                    updateFeedback.setAttribute("role", kind === "info" ? "status" : "alert");
+                    updateFeedback.innerHTML = "";
+                    const icon = document.createElement("i");
+                    icon.className = "fa-solid " + iconClass;
+                    icon.setAttribute("aria-hidden", "true");
+                    const text = document.createElement("span");
+                    text.textContent = message;
+                    updateFeedback.appendChild(icon);
+                    updateFeedback.appendChild(text);
+                    updateFeedback.hidden = false;
+                }
 
+                function clearSelectionDetails() {
+                    selectedComplaint = null;
+                    categoryInput.value = "";
+                    descriptionInput.value = "";
+                    statusInput.value = "";
+                    submitBtn.disabled = eligibleComplaints.length === 0 || isSubmitting;
+                }
+
+                async function refreshComplaintsDropdown() {
+                    try {
+                        const res = await fetch("/api/staff/complaints", {
+                            credentials: "same-origin",
+                            cache: "no-store",
+                        });
+                        const data = await res.json();
+                        if (!res.ok || data.error) {
+                            throw new Error(data.error || "Unable to load complaints.");
+                        }
+
+                        const all = data.complaints || [];
+                        eligibleComplaints = Array.isArray(data.selectableComplaints)
+                            ? data.selectableComplaints
+                            : all.filter(function (c) {
+                                const key = normalizeStatus(c.status);
+                                return key === "assigned" || key === "in progress";
+                            });
+
+                        complaintSelect.innerHTML = "";
+                        const placeholder = document.createElement("option");
+                        placeholder.value = "";
+                        placeholder.disabled = true;
+                        placeholder.selected = true;
+                        placeholder.textContent = eligibleComplaints.length > 0
+                            ? "-- Select Complaint --"
+                            : "-- No Eligible Complaints Available --";
+                        complaintSelect.appendChild(placeholder);
+
+                        if (eligibleComplaints.length > 0) {
+                            eligibleComplaints.forEach(function (c) {
+                                const opt = document.createElement("option");
+                                opt.value = c.complaintId;
+                                opt.textContent = c.complaintId;
+                                complaintSelect.appendChild(opt);
+                            });
+                            complaintSelect.disabled = false;
+                        } else {
+                            complaintSelect.disabled = true;
+                        }
+
+                        clearSelectionDetails();
+                        resetSelectValidation(complaintSelect);
+                    } catch (error) {
+                        console.error(error);
+                        eligibleComplaints = [];
+                        showFeedback(error.message || "Unable to load complaints.", "error");
+                        clearSelectionDetails();
+                    }
+                }
+
+                complaintSelect.addEventListener("change", function () {
+                    const id = this.value;
+                    showFeedback("");
+                    clearSelectionDetails();
+
+                    if (!id) {
+                        return;
                     }
 
-                    complaints = data.complaints || [];
-
-                    const select = document.getElementById("complaintId");
-
-                    select.innerHTML =
-                        "<option value='' disabled selected>-- Select Complaint --</option>";
-
-                    complaints.forEach(function(c){
-
-                        select.innerHTML +=
-                        `<option value="${c.complaintId}">
-                            ${c.complaintId}
-                        </option>`;
-
+                    const complaint = eligibleComplaints.find(function (c) {
+                        return c.complaintId === id;
                     });
+                    if (!complaint) {
+                        showFeedback("Selected complaint could not be found.", "error");
+                        submitBtn.disabled = true;
+                        return;
+                    }
 
-                })
+                    categoryInput.value = complaint.category || "";
+                    descriptionInput.value = complaint.description || "";
 
-                .catch(error => {
-
-                    console.error(error);
-
-                    alert("Unable to load complaints.");
-
+                    const currentKey = normalizeStatus(complaint.status);
+                    if (currentKey === "assigned") {
+                        statusInput.value = "In Progress";
+                        selectedComplaint = complaint;
+                        submitBtn.disabled = isSubmitting;
+                    } else if (currentKey === "in progress") {
+                        statusInput.value = "Resolved";
+                        selectedComplaint = complaint;
+                        submitBtn.disabled = isSubmitting;
+                    } else {
+                        statusInput.value = "";
+                        selectedComplaint = null;
+                        submitBtn.disabled = true;
+                        showFeedback("Resolved or ineligible complaints cannot be updated.", "info");
+                    }
                 });
 
-                // ======================================
-                // Complaint Selection
-                // ======================================
-
-                document.getElementById("updateForm").addEventListener("submit", function(e){
-
+                updateForm.addEventListener("submit", async function (e) {
                     e.preventDefault();
 
-                    const id = document.getElementById("complaintId").value;
-                    const status = document.getElementById("newStatus").value;
-                    const resolution = document.getElementById("resolutionNote").value.trim();
-
-                    GMS.post("/api/staff/complaints/" + encodeURIComponent(id) + "/status", { status: status, resolution: resolution })
-                    .then(function(){
-                        alert("Complaint " + id + " updated to " + status + ".");
-                        GMS.go("/HTML/STAFF/staff_dashboard.html");
-                    })
-                    .catch(function(error){
-                        alert(error.message);
-                    });
-
-                });
-
-                document.getElementById("complaintId")
-
-                .addEventListener("change", function(){
-
-                    const id = this.value;
-
-                    const complaint = complaints.find(function(c){
-
-                        return c.complaintId === id;
-
-
-                    });
-
-                    if(!complaint){
-
-                        document.getElementById("category").value = "";
-
-                        document.getElementById("description").value = "";
-
-                        document.getElementById("status").value = "";
-
+                    const id = complaintSelect.value;
+                    if (!id) {
+                        complaintSelect.classList.add("user-invalid-fallback");
+                        syncControlAria(complaintSelect);
+                        complaintSelect.focus();
                         return;
-
                     }
 
-                    document.getElementById("category").value =
-                        complaint.category;
-
-                    document.getElementById("description").value =
-                        complaint.description;
-
-                    const statusInput = document.getElementById("status");
-
-                    const currentStatus = complaint.status.trim().toLowerCase();
-
-                    if (currentStatus === "assigned") {
-
-                        statusInput.value = "In Progress";
-
-                    }
-                    else if (currentStatus === "in progress") {
-
-                        statusInput.value = "Resolved";
-
-                    }
-                    else {
-
-                        statusInput.value = complaint.status;
-
+                    const newStatus = statusInput.value;
+                    if (!selectedComplaint || !newStatus || isSubmitting) {
+                        return;
                     }
 
+                    let redirected = false;
+                    isSubmitting = true;
+                    submitBtn.disabled = true;
+
+                    try {
+                        await GMS.post(
+                            "/api/staff/complaints/" + encodeURIComponent(id) + "/status",
+                            {
+                                "complaint-id": id,
+                                "complaint-status": newStatus,
+                                status: newStatus,
+                                expectedStatus: selectedComplaint.status,
+                            }
+                        );
+                        redirected = true;
+                        alert("Complaint Status Updated Successfully");
+                        window.location.href = "staff_dashboard.html";
+                    } catch (error) {
+                        showFeedback(error.message || "Unable to update complaint status.", "error");
+                        await refreshComplaintsDropdown();
+                    } finally {
+                        if (!redirected) {
+                            isSubmitting = false;
+                            submitBtn.disabled = eligibleComplaints.length === 0;
+                        }
+                    }
                 });
+
+                refreshComplaintsDropdown();
 
             });
 

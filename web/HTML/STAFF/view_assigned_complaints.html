@@ -126,7 +126,7 @@
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                     <div>
-                        <h2>Assigned Complaints Management</h2>
+                        <h2 id="assignedComplaintsHeading">Assigned Complaints Management</h2>
                         <p style="color: var(--text-muted); font-size: 0.9rem;">
                             Monitor, filter, and update student grievances assigned to your queue.
                         </p>
@@ -137,18 +137,20 @@
                     </button>
                 </div>
 
-                <div class="table-container">
+                <div class="table-container" tabindex="0" role="region" aria-labelledby="assignedComplaintsHeading">
 
                     <table class="custom-table">
 
                         <thead>
                             <tr>
-                                <th>Complaint ID</th>
-                                <th>Student Name</th>
-                                <th>Category</th>
-                                <th>Description</th>
-                                <th>Rating</th>
-                                <th>Status</th>
+                                <th scope="col">Complaint ID</th>
+                                <th scope="col">Student ID</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Category</th>
+                                <th scope="col">Description</th>
+                                <th scope="col">Priority</th>
+                                <th scope="col">Date</th>
+                                <th scope="col">Status</th>
                             </tr>
                         </thead>
 
@@ -157,12 +159,6 @@
                         </tbody>
 
                     </table>
-
-                    <div id="timelinePanel" style="display:none;margin-top:20px;">
-                        <h3 id="timelineTitle"></h3>
-                        <p id="timelineStatus" style="display:none;"></p>
-                        <ol class="timeline" id="timelineList"></ol>
-                    </div>
 
                 </div>
 
@@ -184,6 +180,7 @@
 
         </div>
 
+        <script src="/gms-date.js"></script>
         <script src="/gms-api.js"></script>
         <script>
 
@@ -254,9 +251,18 @@
                 // Render Table
                 // =====================================
 
+                function escapeHtml(text) {
+                    return String(text == null ? "" : text)
+                        .replace(/&/g, "&amp;")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;")
+                        .replace(/"/g, "&quot;")
+                        .replace(/'/g, "&#39;");
+                }
+
                 function wrapText(text, limit) {
 
-                    let words = text.split(" ");
+                    let words = String(text || "").split(" ");
                     let line = "";
                     let result = "";
 
@@ -278,42 +284,38 @@
                     return result + line;
 
                 }
-                
-                // Opens the case timeline for one assigned complaint. Text is set with textContent, never as HTML.
-                async function openTimeline(complaintId){
-                    const panel=document.getElementById("timelinePanel");
-                    const list=document.getElementById("timelineList");
-                    const status=document.getElementById("timelineStatus");
-                    document.getElementById("timelineTitle").textContent="Case timeline: "+complaintId;
-                    list.innerHTML="";
-                    status.style.display="none";
-                    panel.style.display="block";
-                    try{
-                        const data=await GMS.get("/api/staff/complaints/"+encodeURIComponent(complaintId)+"/timeline");
-                        if(!data.events.length){
-                            GMS.notify(status,"No activity has been recorded for this complaint yet.",false);
-                            return;
-                        }
-                        data.events.forEach(function(ev){
-                            const li=document.createElement("li");
-                            const text=document.createElement("span");
-                            text.textContent=ev.message;
-                            const meta=document.createElement("span");
-                            meta.className="timeline-meta";
-                            meta.textContent=new Date(ev.at).toLocaleString("en-IN");
-                            li.appendChild(text);
-                            li.appendChild(meta);
-                            list.appendChild(li);
-                        });
-                    }catch(err){
-                        GMS.notify(status,err.message,true);
+
+                function priorityBadgeClass(priority){
+
+                    switch(String(priority || "").trim().toLowerCase()){
+
+                        case "high":
+                            return "badge-priority-high";
+
+                        case "medium":
+                            return "badge-priority-medium";
+
+                        case "low":
+                            return "badge-priority-low";
+
+                        default:
+                            return "";
+
                     }
+
                 }
 
-                document.getElementById("myComplaintsTableBody").addEventListener("click",function(e){
-                    const btn=e.target.closest(".timeline-open");
-                    if(btn) openTimeline(btn.dataset.id);
-                });
+                function renderPriorityCell(priority){
+
+                    const raw = String(priority == null ? "" : priority).trim();
+                    if(!raw){
+                        return "-";
+                    }
+                    const cls = priorityBadgeClass(raw);
+                    const badgeClasses = cls ? "badge priority-badge " + cls : "badge priority-badge";
+                    return '<span class="' + badgeClasses + '">' + escapeHtml(raw) + "</span>";
+
+                }
 
                 function renderTable(){
 
@@ -329,7 +331,7 @@
 
                         tbody.innerHTML=`
                             <tr>
-                                <td colspan="6" style="text-align:center;">
+                                <td colspan="8" style="text-align:center;">
                                     No Complaints Found
                                 </td>
                             </tr>
@@ -340,7 +342,8 @@
                         pageData.forEach(function(c){
 
                             let badge="";
-                            let description = wrapText(c.description || "", 50);
+                            let description = wrapText(escapeHtml(c.description || ""), 50);
+                            let formattedDate = GMSDate.formatDate(c.date, "-");
 
                             switch((c.status || "").toLowerCase()){
 
@@ -369,17 +372,23 @@
 
                             <tr>
 
-                                <td><button type="button" class="timeline-open" data-id="${c.complaintId}" style="background:none;border:0;padding:0;color:#2563eb;font:inherit;cursor:pointer;text-decoration:underline;">${c.complaintId}</button></td>
+                                <td>${escapeHtml(c.complaintId || "")}</td>
 
-                                <td>${c.studentName}</td>
+                                <td>${escapeHtml(c.studentId || "-")}</td>
 
-                                <td>${c.category}</td>
+                                <td>${escapeHtml(c.studentName || "")}</td>
+
+                                <td>${escapeHtml(c.category || "")}</td>
 
                                 <td>${description}</td>
 
-                                <td>${c.rating == null || c.rating === "" ? "-" : c.rating}</td>                                <td>
+                                <td>${renderPriorityCell(c.priority)}</td>
+
+                                <td>${escapeHtml(formattedDate)}</td>
+
+                                <td>
                                     <span class="badge ${badge}">
-                                        ${c.status}
+                                        ${escapeHtml(c.status || "")}
                                     </span>
                                     ${c.overdue ? '<span class="badge badge-overdue" style="margin-left:4px;">Overdue</span>' : ""}
                                 </td>
@@ -414,9 +423,33 @@
                 // Load Complaints
                 // =====================================
 
-                function loadComplaints(){
+                function applySearchFilter() {
+                    const searchInput = document.getElementById("staffsearchInput");
+                    const keyword = searchInput ? searchInput.value.trim().toLowerCase() : "";
+                    if (keyword === "") {
+                        allMyComplaints = [...originalMyComplaints];
+                        return;
+                    }
+                    allMyComplaints = originalMyComplaints.filter(function(c){
+                        const formattedDate = GMSDate.formatDate(c.date, "").toLowerCase();
+                        return (
+                            String(c.complaintId || "").toLowerCase().includes(keyword) ||
+                            String(c.complaintId || "").replace(/-/g, "").toLowerCase().includes(keyword) ||
+                            String(c.studentId || "").toLowerCase().includes(keyword) ||
+                            String(c.studentId || "").replace(/-/g, "").toLowerCase().includes(keyword) ||
+                            String(c.studentName || "").toLowerCase().includes(keyword) ||
+                            String(c.category || "").toLowerCase().includes(keyword) ||
+                            String(c.description || "").toLowerCase().includes(keyword) ||
+                            String(c.priority || "").toLowerCase().includes(keyword) ||
+                            formattedDate.includes(keyword) ||
+                            String(c.status || "").toLowerCase().includes(keyword)
+                        );
+                    });
+                }
 
-                    fetch("/api/staff/complaints")
+                function loadComplaints(preserveState){
+
+                    fetch("/api/staff/complaints", { credentials: "same-origin", cache: "no-store" })
 
                     .then(response=>{
 
@@ -435,9 +468,10 @@
                         }
 
                         originalMyComplaints = data.complaints || [];
-                        allMyComplaints = [...originalMyComplaints];
+                        applySearchFilter();
 
-                        currentPage = 1;
+                        const totalPages = Math.max(1, Math.ceil(allMyComplaints.length / rowsPerPage));
+                        currentPage = preserveState ? Math.min(currentPage, totalPages) : 1;
 
                         renderTable();
 
@@ -449,7 +483,7 @@
 
                         document.getElementById("myComplaintsTableBody").innerHTML = `
                             <tr>
-                                <td colspan="6" style="text-align:center;color:red;">
+                                <td colspan="8" style="text-align:center;color:red;">
                                     Failed to load complaints.
                                 </td>
                             </tr>
@@ -491,44 +525,16 @@
                 // Search
                 // =====================================
 
-                document.getElementById("staffsearchInput")
-                .addEventListener("keyup",function(){
-
-                    const keyword = this.value.trim().toLowerCase();
-
-                    if(keyword===""){
-
-                        allMyComplaints=[...originalMyComplaints];
-
-                    }else{
-
-                        allMyComplaints = originalMyComplaints.filter(function(c){
-
-                            return(
-
-                                c.complaintId.toLowerCase().includes(keyword) ||
-
-                                c.studentName.toLowerCase().includes(keyword) ||
-
-                                c.category.toLowerCase().includes(keyword) ||
-
-                                c.description.toLowerCase().includes(keyword) ||
-
-                                String(c.rating).toLowerCase().includes(keyword) ||
-
-                                c.status.toLowerCase().includes(keyword)
-
-                            );
-
+                const staffSearchInput = document.getElementById("staffsearchInput");
+                if (staffSearchInput) {
+                    ["keyup", "input"].forEach(function (evtName) {
+                        staffSearchInput.addEventListener(evtName, function () {
+                            applySearchFilter();
+                            currentPage = 1;
+                            renderTable();
                         });
-
-                    }
-
-                    currentPage=1;
-
-                    renderTable();
-
-                });
+                    });
+                }
 
                 // =====================================
                 // Load Data Button
@@ -562,10 +568,24 @@
                 }
 
                 // =====================================
-                // Initial Load
+                // Initial Load & Sync
                 // =====================================
 
-                loadComplaints();
+                loadComplaints(false);
+
+                setInterval(function () {
+                    loadComplaints(true);
+                }, 15000);
+
+                document.addEventListener("visibilitychange", function () {
+                    if (!document.hidden) {
+                        loadComplaints(true);
+                    }
+                });
+
+                window.addEventListener("pageshow", function () {
+                    loadComplaints(true);
+                });
 
             });
 

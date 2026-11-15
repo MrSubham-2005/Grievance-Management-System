@@ -74,7 +74,7 @@
 
                             <div class="input-control-wrapper">
                                 <i class="fa-solid fa-user input-icon"></i>
-                                <input type="text" id="studentEmail" name="studentEmail"placeholder=" "required>
+                                <input type="text" id="studentEmail" name="studentEmail" placeholder=" " required>
                                 <label for="studentEmail" class="floating-label"> Mobile No / Email </label>
                             </div>
                             <span class="validation-msg" id="emailError"></span>
@@ -147,7 +147,7 @@
             // Gmail Validation
 
             function isValidEmail(email) {
-                return /^[a-z0-9._%+-]+@gmail\.com$/.test(email);
+                return /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email);
             }
 
             // Indian Mobile Validation

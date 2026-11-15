@@ -1,9 +1,9 @@
-# GMS complaint portal container. Runs the Express server on port 3000.
+# GMS complaint portal container. Runs the Express server on port 4000.
 # Configure at runtime with DATABASE_URL, SESSION_SECRET, AI_PROVIDER, AI_API_KEY and optional RESEND_API_KEY.
 FROM node:22-alpine
 
 ENV NODE_ENV=production \
-    PORT=3000
+    PORT=4000
 
 WORKDIR /app
 
@@ -15,9 +15,9 @@ COPY server ./server
 COPY web ./web
 
 USER node
-EXPOSE 3000
+EXPOSE 4000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -q -O /dev/null http://127.0.0.1:3000/Home.html || exit 1
+  CMD wget -q -O /dev/null http://127.0.0.1:4000/Home.html || exit 1
 
 CMD ["node", "server/app.js"]

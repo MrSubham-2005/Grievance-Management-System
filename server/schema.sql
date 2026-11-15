@@ -69,28 +69,28 @@ CREATE TABLE IF NOT EXISTS staff_request (
 
 CREATE TABLE IF NOT EXISTS complaint (
   complaint_id      VARCHAR(20) PRIMARY KEY,
-  student_id        VARCHAR(20) NOT NULL REFERENCES student(student_id),
+  student_id        VARCHAR(20) NOT NULL REFERENCES student(student_id) ON UPDATE CASCADE,
   category          VARCHAR(100) NOT NULL,
   description       TEXT NOT NULL,
   priority          VARCHAR(20) NOT NULL DEFAULT 'Medium',
   status            VARCHAR(30) NOT NULL DEFAULT 'Pending',
-  assigned_staff_id VARCHAR(20) REFERENCES staff(staff_id),
+  assigned_staff_id VARCHAR(20) REFERENCES staff(staff_id) ON UPDATE CASCADE,
   resolution        TEXT,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS complaint_member (
-  complaint_id      VARCHAR(20) NOT NULL REFERENCES complaint(complaint_id) ON DELETE CASCADE,
-  student_id        VARCHAR(20) NOT NULL REFERENCES student(student_id),
+  complaint_id      VARCHAR(20) NOT NULL REFERENCES complaint(complaint_id) ON UPDATE CASCADE ON DELETE CASCADE,
+  student_id        VARCHAR(20) NOT NULL REFERENCES student(student_id) ON UPDATE CASCADE,
   PRIMARY KEY (complaint_id, student_id)
 );
 
 CREATE TABLE IF NOT EXISTS feedback (
   feedback_id       VARCHAR(20) PRIMARY KEY,
-  complaint_id      VARCHAR(20) NOT NULL REFERENCES complaint(complaint_id),
-  student_id        VARCHAR(20) NOT NULL REFERENCES student(student_id),
-  staff_id          VARCHAR(20) REFERENCES staff(staff_id),
+  complaint_id      VARCHAR(20) NOT NULL REFERENCES complaint(complaint_id) ON UPDATE CASCADE,
+  student_id        VARCHAR(20) NOT NULL REFERENCES student(student_id) ON UPDATE CASCADE,
+  staff_id          VARCHAR(20) REFERENCES staff(staff_id) ON UPDATE CASCADE,
   category          VARCHAR(100),
   rating            INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
   review            TEXT,
@@ -107,6 +107,10 @@ CREATE INDEX IF NOT EXISTS idx_complaint_staff ON complaint(assigned_staff_id);
 
 ALTER TABLE complaint ADD COLUMN IF NOT EXISTS ai_analysis JSONB;
 
+-- Assignment audit metadata on complaints.
+ALTER TABLE complaint ADD COLUMN IF NOT EXISTS assigned_by VARCHAR(20) REFERENCES admin(admin_id) ON UPDATE CASCADE;
+ALTER TABLE complaint ADD COLUMN IF NOT EXISTS assigned_at TIMESTAMPTZ;
+
 -- Service-level deadline. Set from priority when a complaint is raised (see server/sla.js).
 ALTER TABLE complaint ADD COLUMN IF NOT EXISTS due_at TIMESTAMPTZ;
 UPDATE complaint SET due_at = created_at + CASE priority
@@ -118,7 +122,7 @@ UPDATE complaint SET due_at = created_at + CASE priority
 -- Case timeline: one row per change (raised, assigned, status, resolved).
 CREATE TABLE IF NOT EXISTS complaint_event (
   event_id      BIGSERIAL PRIMARY KEY,
-  complaint_id  VARCHAR(20) NOT NULL REFERENCES complaint(complaint_id) ON DELETE CASCADE,
+  complaint_id  VARCHAR(20) NOT NULL REFERENCES complaint(complaint_id) ON UPDATE CASCADE ON DELETE CASCADE,
   kind          VARCHAR(30) NOT NULL,
   message       TEXT NOT NULL,
   actor         VARCHAR(150),
