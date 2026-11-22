@@ -358,15 +358,13 @@ Errors return a JSON body with an `error` message that names the problem and the
 
 ## 📸 Screenshots
 
-Screenshots are added after the first production deploy. Replace each path with a file under `docs/screenshots/`.
-
 | Home | Signup | Login |
 | :---: | :---: | :---: |
-| `docs/screenshots/desktop.png` _(pending)_ | `docs/screenshots/signup.png` _(pending)_ | `docs/screenshots/login.png` _(pending)_ |
+| ![Home](docs/screenshots/desktop.png) | ![Signup](docs/screenshots/signup.png) | ![Login](docs/screenshots/login.png) |
 
 | Dashboard | New Complaint | Feedback |
 | :---: | :---: | :---: |
-| `docs/screenshots/dashboard.png` _(pending)_ | `docs/screenshots/complaint.png` _(pending)_ | `docs/screenshots/feedback.png` _(pending)_ |
+| ![Dashboard](docs/screenshots/dashboard.png) | ![New Complaint](docs/screenshots/complaint.png) | ![Feedback](docs/screenshots/feedback.png) |
 
 ---
 
