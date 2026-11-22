@@ -292,10 +292,13 @@ router.get('/complaints/:id/timeline', wrap(async (req, res) => {
 }));
 
 router.post('/password', wrap(async (req, res) => {
-  const current = req.body.staff_current_password || '';
-  const next = req.body.staff_new_password || '';
-  const confirm = req.body.staff_conform_password || '';
-  if (!current || !next) return fail(res, 400, 'Enter your current and new password.');
+  const body = req.body || {};
+  const current = typeof body.staff_current_password === 'string' ? body.staff_current_password : '';
+  const next = typeof body.staff_new_password === 'string' ? body.staff_new_password : '';
+  const confirm = typeof body.staff_conform_password === 'string' ? body.staff_conform_password : '';
+  if (!current.trim() || !next.trim() || !confirm.trim()) {
+    return fail(res, 400, 'Fill in all three password fields.');
+  }
   if (next !== confirm) return fail(res, 400, 'The new passwords do not match.');
   if (next.length < 6) return fail(res, 400, 'Password must be at least 6 characters.');
   if (current === next) return fail(res, 400, 'New Password cannot be the same as Current Password');

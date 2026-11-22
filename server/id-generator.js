@@ -8,11 +8,11 @@ const ALLOWED_TARGETS = {
   staff: { column: 'staff_id', prefix: 'STF', hyphen: true },
   complaint: { column: 'complaint_id', prefix: 'CMP', hyphen: true },
   admin: { column: 'admin_id', prefix: 'ADM', hyphen: true },
-  staff_request: { column: 'request_id', prefix: 'REQ', hyphen: false },
-  feedback: { column: 'feedback_id', prefix: 'FB', hyphen: false },
+  staff_request: { column: 'request_id', prefix: 'REQ', hyphen: true },
+  feedback: { column: 'feedback_id', prefix: 'FB', hyphen: true },
 };
 
-const HYPHENATED_PREFIXES = new Set(['STU', 'STF', 'CMP', 'ADM']);
+const HYPHENATED_PREFIXES = new Set(['STU', 'STF', 'CMP', 'ADM', 'REQ', 'FB']);
 
 async function nextId(table, column, prefix, db = pool) {
   const spec = ALLOWED_TARGETS[table];

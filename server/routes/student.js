@@ -3,7 +3,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const pool = require('../db');
 const { requireRole, wrap } = require('../middleware');
-const { analyzeComplaint, aiConfigured, CATEGORIES } = require('../ai');
+const { analyzeComplaint, aiConfigured, CATEGORIES, findSimilarComplaintFallback } = require('../ai');
 const { deadlineFor, isOverdue } = require('../sla');
 const { recordEvent, timelineFor } = require('../timeline');
 const {
@@ -72,7 +72,17 @@ router.get('/stats', wrap(async (req, res) => {
 }));
 
 // Open complaints a new complaint could duplicate or join.
-async function openComplaints() {
+async function openComplaints(category) {
+  if (category && typeof category === 'string' && category.trim()) {
+    const { rows } = await pool.query(
+      `SELECT complaint_id, category, description FROM complaint
+       WHERE status <> 'Resolved'
+       ORDER BY CASE WHEN TRIM(UPPER(category)) = TRIM(UPPER($1)) THEN 0 ELSE 1 END, created_at DESC
+       LIMIT 50`,
+      [category.trim()]
+    );
+    return rows;
+  }
   const { rows } = await pool.query(
     `SELECT complaint_id, category, description FROM complaint
      WHERE status <> 'Resolved' ORDER BY created_at DESC LIMIT 50`
@@ -220,15 +230,53 @@ function sendJoinResponse(res, outcome) {
 // Duplicate check for the popup: returns the open complaint the AI matched, with its real details.
 router.post('/check-duplicate', wrap(async (req, res) => {
   const description = String(req.body.description || '').trim();
+  const category = String(req.body.category || '').trim();
   if (description.length < 10) return fail(res, 400, 'Describe the problem in at least 10 characters.');
-  if (!aiConfigured()) {
-    return fail(res, 503, 'AI analysis is not configured on the server. Set AI_API_KEY and restart.');
+
+  const open = await openComplaints(category);
+  if (!open || open.length === 0) {
+    return res.json({ duplicate: false });
   }
-  const open = await openComplaints();
-  const analysis = await analyzeComplaint(description, open);
-  const dupCandidates = complaintIdCandidates(analysis.duplicateOf);
-  const match = open.find((c) => dupCandidates.includes(c.complaint_id));
-  if (!match) return res.json({ duplicate: false });
+
+  let matchedComplaintId = '';
+  let matchedReason = '';
+  let matchedSimilarity = 85;
+
+  if (aiConfigured()) {
+    try {
+      const analysis = await analyzeComplaint(description, open);
+      if (analysis && analysis.duplicateOf) {
+        const dupCandidates = complaintIdCandidates(analysis.duplicateOf);
+        const match = open.find((c) => dupCandidates.includes(c.complaint_id));
+        if (match) {
+          matchedComplaintId = match.complaint_id;
+          matchedReason = analysis.duplicateReason || 'AI identified this as a semantically similar complaint.';
+          matchedSimilarity = analysis.similarity || 85;
+        }
+      }
+    } catch (_err) {
+      // AI call failed (network/quota/model error) - fallback to semantic keyword/synonym matcher
+      const fallback = findSimilarComplaintFallback(description, open, category);
+      if (fallback) {
+        matchedComplaintId = fallback.complaintId;
+        matchedReason = fallback.reason;
+        matchedSimilarity = fallback.similarity;
+      }
+    }
+  } else {
+    // AI not configured - fallback to semantic keyword/synonym matcher
+    const fallback = findSimilarComplaintFallback(description, open, category);
+    if (fallback) {
+      matchedComplaintId = fallback.complaintId;
+      matchedReason = fallback.reason;
+      matchedSimilarity = fallback.similarity;
+    }
+  }
+
+  if (!matchedComplaintId) {
+    return res.json({ duplicate: false });
+  }
+
   const detail = await pool.query(
     `SELECT c.complaint_id, c.category, c.description, c.status,
             COUNT(DISTINCT m.student_id) FILTER (WHERE m.student_id <> c.student_id)::int AS reported_by
@@ -236,19 +284,20 @@ router.post('/check-duplicate', wrap(async (req, res) => {
      LEFT JOIN public.complaint_member m ON m.complaint_id = c.complaint_id
      WHERE c.complaint_id = $1
      GROUP BY c.complaint_id`,
-    [match.complaint_id]
+    [matchedComplaintId]
   );
   const d = detail.rows[0];
   if (!d) return res.json({ duplicate: false });
+
   res.json({
     duplicate: true,
     complaintId: formatComplaintId(d.complaint_id),
-    similarity: 100,
+    similarity: matchedSimilarity,
     category: d.category,
     description: d.description,
     reportedBy: Number(d.reported_by) || 0,
     status: d.status,
-    reason: analysis.duplicateReason,
+    reason: matchedReason,
   });
 }));
 
@@ -374,6 +423,7 @@ router.post('/feedback', wrap(async (req, res) => {
   const complaintId = String(req.body.complaint_id || '').trim();
   const rating = Number(req.body.rating);
   const review = String(req.body.review || req.body['review-message'] || '').trim();
+  const feedbackCategory = String(req.body.feedbackCategory || req.body.category || '').trim();
   if (!complaintId) return fail(res, 400, 'Choose the complaint you are rating.');
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) return fail(res, 400, 'Rating must be a whole number from 1 to 5.');
   const actualComplaintId = await resolveComplaintId(pool, complaintId);
@@ -388,6 +438,7 @@ router.post('/feedback', wrap(async (req, res) => {
   const formattedId = formatComplaintId(actualComplaintId);
   if (!rows[0]) return fail(res, 404, `You are not a member of complaint ${formattedId}.`);
   if (rows[0].status !== 'Resolved') return fail(res, 409, 'You can rate a complaint only after it is resolved.');
+  const categoryToSave = feedbackCategory || rows[0].category;
   const outcome = await withIdLock(pool, 'feedback', async (client) => {
     const dup = await client.query('SELECT 1 FROM feedback WHERE complaint_id=$1 AND student_id=$2', [actualComplaintId, req.user.id]);
     if (dup.rowCount) {
@@ -397,7 +448,7 @@ router.post('/feedback', wrap(async (req, res) => {
     await client.query(
       `INSERT INTO feedback (feedback_id, complaint_id, student_id, staff_id, category, rating, review)
        VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-      [id, actualComplaintId, req.user.id, rows[0].assigned_staff_id, rows[0].category, rating, review]
+      [id, actualComplaintId, req.user.id, rows[0].assigned_staff_id, categoryToSave, rating, review]
     );
     if (rows[0].assigned_staff_id) {
       await client.query(
@@ -412,10 +463,13 @@ router.post('/feedback', wrap(async (req, res) => {
 }));
 
 router.post('/password', wrap(async (req, res) => {
-  const current = req.body.student_current_password || '';
-  const next = req.body.student_new_password || '';
-  const confirm = req.body.student_conform_password || '';
-  if (!current || !next) return fail(res, 400, 'Enter your current and new password.');
+  const body = req.body || {};
+  const current = typeof body.student_current_password === 'string' ? body.student_current_password : '';
+  const next = typeof body.student_new_password === 'string' ? body.student_new_password : '';
+  const confirm = typeof body.student_conform_password === 'string' ? body.student_conform_password : '';
+  if (!current.trim() || !next.trim() || !confirm.trim()) {
+    return fail(res, 400, 'Fill in all three password fields.');
+  }
   if (next !== confirm) return fail(res, 400, 'The new passwords do not match.');
   if (next.length < 6) return fail(res, 400, 'Password must be at least 6 characters.');
   if (current === next) return fail(res, 400, 'New Password cannot be the same as Current Password');

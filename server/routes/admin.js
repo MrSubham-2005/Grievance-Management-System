@@ -9,6 +9,9 @@ const { formatComplaintId, resolveComplaintId } = require('../complaint-id');
 const { nextId, withIdLock } = require('../id-generator');
 const { fetchRecentComplaints } = require('../recent-complaints');
 
+const INDIAN_MOBILE_RE = /^[6-9]\d{9}$/;
+const GMAIL_RE = /^[a-z0-9._%+-]+@gmail\.com$/;
+
 const router = express.Router();
 router.use(requireRole('admin'));
 
@@ -132,14 +135,18 @@ router.get('/complaints.csv', wrap(async (req, res) => {
 
 // Staff in a department matching a complaint category, with their workload.
 router.get('/staff-for-category', wrap(async (req, res) => {
-  const category = String(req.query.category || '');
+  const category = String(req.query.category || '').trim();
+  if (!category) return res.json({ staff: [] });
   const { rows } = await pool.query(
     `SELECT s.staff_id, s.staff_name,
             COUNT(c.complaint_id)::int AS total,
-            COUNT(c.complaint_id) FILTER (WHERE c.status <> 'Resolved')::int AS pending
-     FROM staff s LEFT JOIN complaint c ON c.assigned_staff_id = s.staff_id
-     WHERE s.status = 'Active' AND s.department = $1
-     GROUP BY s.staff_id, s.staff_name ORDER BY s.staff_name`,
+            COUNT(c.complaint_id) FILTER (WHERE LOWER(c.status) IN ('assigned', 'in progress'))::int AS pending
+     FROM staff s
+     LEFT JOIN complaint c ON c.assigned_staff_id = s.staff_id
+     WHERE s.status = 'Active'
+       AND TRIM(UPPER(s.department)) = TRIM(UPPER($1))
+     GROUP BY s.staff_id, s.staff_name
+     ORDER BY pending ASC, total ASC, s.staff_name ASC, s.staff_id ASC`,
     [category]
   );
   res.json({ staff: rows.map((r) => ({ staffId: r.staff_id, staffName: r.staff_name, total: r.total, pending: r.pending })) });
@@ -239,15 +246,32 @@ router.get('/staff-requests', wrap(async (req, res) => {
   res.json(rows);
 }));
 
+function parseRequestIdCandidates(rawId) {
+  const idStr = String(rawId || '').trim();
+  const digits = idStr.match(/\d+$/)?.[0] || '';
+  const num = digits ? digits.padStart(4, '0') : '';
+  const set = new Set([idStr]);
+  if (num) {
+    set.add(`REQ-${num}`);
+    set.add(`REQ${num}`);
+    set.add(num);
+  }
+  return Array.from(set);
+}
+
 // Approving moves the request into the staff table, keeping the same login details.
 router.post('/staff-requests/:id/approve', wrap(async (req, res) => {
-  const requestId = req.params.id.replace(/^REQ-/, '');
+  const candidates = parseRequestIdCandidates(req.params.id);
   const outcome = await withIdLock(pool, 'staff', async (client) => {
-    const { rows } = await client.query('SELECT * FROM staff_request WHERE request_id = $1 FOR UPDATE', [requestId]);
+    const { rows } = await client.query(
+      'SELECT * FROM staff_request WHERE request_id = ANY($1) FOR UPDATE',
+      [candidates]
+    );
     if (!rows[0]) {
       return { error: { status: 404, message: `Request ${req.params.id} no longer exists.` } };
     }
     const r = rows[0];
+    const actualRequestId = r.request_id;
     const dup = await client.query(
       'SELECT 1 FROM staff WHERE LOWER(email) = $1 OR mobile = $2',
       [String(r.email || '').toLowerCase(), r.mobile]
@@ -261,7 +285,7 @@ router.post('/staff-requests/:id/approve', wrap(async (req, res) => {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'Active',$9,NOW())`,
       [staffId, r.staff_name, r.mobile, r.email, r.department, r.password, r.security_question, r.security_answer, req.user.id]
     );
-    await client.query('DELETE FROM staff_request WHERE request_id = $1', [requestId]);
+    await client.query('DELETE FROM staff_request WHERE request_id = $1', [actualRequestId]);
     return { staffId, staffName: r.staff_name };
   });
   if (outcome.error) return fail(res, outcome.error.status, outcome.error.message);
@@ -269,7 +293,11 @@ router.post('/staff-requests/:id/approve', wrap(async (req, res) => {
 }));
 
 router.post('/staff-requests/:id/reject', wrap(async (req, res) => {
-  const result = await pool.query('DELETE FROM staff_request WHERE request_id = $1 RETURNING request_id', [req.params.id.replace(/^REQ-/, '')]);
+  const candidates = parseRequestIdCandidates(req.params.id);
+  const result = await pool.query(
+    'DELETE FROM staff_request WHERE request_id = ANY($1) RETURNING request_id',
+    [candidates]
+  );
   if (!result.rowCount) return fail(res, 404, `Request ${req.params.id} no longer exists.`);
   res.json({ ok: true, message: `Request ${req.params.id} was rejected.` });
 }));
@@ -293,12 +321,16 @@ router.get('/staff', wrap(async (req, res) => {
     `SELECT request_id, staff_name, mobile, email, department, created_at FROM staff_request ORDER BY created_at ASC`
   );
   const staff = [
-    ...reqs.rows.map((r) => ({
-      staffId: `REQ-${r.request_id}`, staffName: r.staff_name, mobile: r.mobile, email: r.email,
-      department: r.department, rating: 0, status: 'Pending', addedBy: 'Self sign up',
-      approvedOn: 'Pending',
-      totalComplaint: 0, pending: 0, inProgress: 0, resolved: 0,
-    })),
+    ...reqs.rows.map((r) => {
+      const raw = String(r.request_id || '').trim();
+      const displayId = raw.startsWith('REQ-') ? raw : (raw.startsWith('REQ') ? `REQ-${raw.slice(3)}` : `REQ-${raw}`);
+      return {
+        staffId: displayId, staffName: r.staff_name, mobile: r.mobile, email: r.email,
+        department: r.department, rating: 0, status: 'Pending', addedBy: 'Self sign up',
+        approvedOn: 'Pending',
+        totalComplaint: 0, pending: 0, inProgress: 0, resolved: 0,
+      };
+    }),
     ...rows.map((r) => ({
       staffId: r.staff_id, staffName: r.staff_name, mobile: r.mobile, email: r.email,
       department: r.department, rating: Number(r.rating), status: r.status,
@@ -322,12 +354,38 @@ router.post('/staff', wrap(async (req, res) => {
   if (!name || !mobile || !email || !department || !password || !question || !answer) {
     return fail(res, 400, 'Fill in every field before adding staff.');
   }
+  if (!INDIAN_MOBILE_RE.test(mobile)) {
+    return fail(res, 400, 'Enter a valid 10-digit Indian mobile number.');
+  }
+  if (!GMAIL_RE.test(email)) {
+    return fail(res, 400, 'Enter a valid Gmail address.');
+  }
   if (password.length < 6) return fail(res, 400, 'Password must be at least 6 characters.');
   const outcome = await withIdLock(pool, 'staff', async (client) => {
-    const taken = await client.query('SELECT 1 FROM staff WHERE LOWER(email) = $1 OR mobile = $2', [email, mobile]);
-    if (taken.rowCount) {
-      return { error: { status: 409, message: 'A staff member with this email or mobile already exists.' } };
+    const existingStaff = await client.query(
+      'SELECT LOWER(email) AS email, mobile FROM staff WHERE LOWER(email) = $1 OR mobile = $2',
+      [email, mobile]
+    );
+    if (existingStaff.rowCount > 0) {
+      const emailTaken = existingStaff.rows.some((r) => r.email === email);
+      if (emailTaken) {
+        return { error: { status: 409, message: 'Email Already Exists' } };
+      }
+      return { error: { status: 409, message: 'Mobile Already Exists' } };
     }
+
+    const existingReq = await client.query(
+      'SELECT LOWER(email) AS email, mobile FROM staff_request WHERE LOWER(email) = $1 OR mobile = $2',
+      [email, mobile]
+    );
+    if (existingReq.rowCount > 0) {
+      const reqEmailTaken = existingReq.rows.some((r) => r.email === email);
+      if (reqEmailTaken) {
+        return { error: { status: 409, message: 'Email Already Requested' } };
+      }
+      return { error: { status: 409, message: 'Mobile Number Already Requested' } };
+    }
+
     const staffId = await nextId('staff', 'staff_id', 'STF', client);
     await client.query(
       `INSERT INTO staff (staff_id, staff_name, mobile, email, department, password, security_question, security_answer, status, created_by, created_at)
@@ -393,10 +451,13 @@ router.post('/students/:id/status', wrap(async (req, res) => {
 }));
 
 router.post('/password', wrap(async (req, res) => {
-  const current = req.body.admin_current_password || '';
-  const next = req.body.admin_new_password || '';
-  const confirm = req.body.admin_conform_password || '';
-  if (!current || !next || !confirm) return fail(res, 400, 'Fill in all three password fields.');
+  const body = req.body || {};
+  const current = typeof body.admin_current_password === 'string' ? body.admin_current_password : '';
+  const next = typeof body.admin_new_password === 'string' ? body.admin_new_password : '';
+  const confirm = typeof body.admin_conform_password === 'string' ? body.admin_conform_password : '';
+  if (!current.trim() || !next.trim() || !confirm.trim()) {
+    return fail(res, 400, 'Fill in all three password fields.');
+  }
   if (next !== confirm) return fail(res, 400, 'The new passwords do not match.');
   if (next.length < 6) return fail(res, 400, 'New password must be at least 6 characters.');
   if (current === next) return fail(res, 400, 'New Password cannot be the same as Current Password');

@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const http = require('node:http');
 const express = require('express');
 const session = require('express-session');
@@ -56,6 +57,30 @@ test('Group A: Staff Change Password - reject same, wrong current, confirm misma
 
   try {
     await withServer(testApp, async (baseUrl) => {
+      const hashBeforeTests = storedHash;
+
+      // 0. Missing, whitespace-only, matching whitespace-only, and non-string inputs -> HTTP 400 without DB update
+      const invalidEmptyPayloads = [
+        { staff_new_password: 'StaffNewPass123!', staff_conform_password: 'StaffNewPass123!' },
+        { staff_current_password: initialPassword, staff_conform_password: 'StaffNewPass123!' },
+        { staff_current_password: initialPassword, staff_new_password: 'StaffNewPass123!' },
+        { staff_current_password: '      ', staff_new_password: 'StaffNewPass123!', staff_conform_password: 'StaffNewPass123!' },
+        { staff_current_password: initialPassword, staff_new_password: '      ', staff_conform_password: 'StaffNewPass123!' },
+        { staff_current_password: initialPassword, staff_new_password: 'StaffNewPass123!', staff_conform_password: '      ' },
+        { staff_current_password: initialPassword, staff_new_password: '      ', staff_conform_password: '      ' },
+        { staff_current_password: 123456, staff_new_password: { bad: true }, staff_conform_password: { bad: true } },
+      ];
+      for (const payload of invalidEmptyPayloads) {
+        const res = await fetch(`${baseUrl}/api/staff/password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        assert.equal(res.status, 400);
+        assert.equal((await res.json()).error, 'Fill in all three password fields.');
+        assert.equal(storedHash, hashBeforeTests);
+      }
+
       // 1. Same password returns HTTP 400
       const sameRes = await fetch(`${baseUrl}/api/staff/password`, {
         method: 'POST',
@@ -69,6 +94,7 @@ test('Group A: Staff Change Password - reject same, wrong current, confirm misma
       assert.equal(sameRes.status, 400);
       const sameData = await sameRes.json();
       assert.equal(sameData.error, 'New Password cannot be the same as Current Password');
+      assert.equal(storedHash, hashBeforeTests);
 
       // 2. Incorrect current password returns HTTP 401
       const wrongRes = await fetch(`${baseUrl}/api/staff/password`, {
@@ -83,6 +109,7 @@ test('Group A: Staff Change Password - reject same, wrong current, confirm misma
       assert.equal(wrongRes.status, 401);
       const wrongData = await wrongRes.json();
       assert.equal(wrongData.error, 'Your current password is wrong.');
+      assert.equal(storedHash, hashBeforeTests);
 
       // 3. New and confirmation mismatch returns HTTP 400
       const mismatchRes = await fetch(`${baseUrl}/api/staff/password`, {
@@ -97,6 +124,7 @@ test('Group A: Staff Change Password - reject same, wrong current, confirm misma
       assert.equal(mismatchRes.status, 400);
       const mismatchData = await mismatchRes.json();
       assert.equal(mismatchData.error, 'The new passwords do not match.');
+      assert.equal(storedHash, hashBeforeTests);
 
       // 4. Minimum length < 6 returns HTTP 400
       const shortRes = await fetch(`${baseUrl}/api/staff/password`, {
@@ -111,6 +139,7 @@ test('Group A: Staff Change Password - reject same, wrong current, confirm misma
       assert.equal(shortRes.status, 400);
       const shortData = await shortRes.json();
       assert.equal(shortData.error, 'Password must be at least 6 characters.');
+      assert.equal(storedHash, hashBeforeTests);
 
       // 5. Valid new password succeeds
       const successRes = await fetch(`${baseUrl}/api/staff/password`, {
@@ -125,6 +154,7 @@ test('Group A: Staff Change Password - reject same, wrong current, confirm misma
       assert.equal(successRes.status, 200);
       const successData = await successRes.json();
       assert.equal(successData.ok, true);
+      assert.notEqual(storedHash, hashBeforeTests);
       assert.ok(await bcrypt.compare('StaffNewPass123!', storedHash));
     });
   } finally {
@@ -163,6 +193,30 @@ test('Group B: Admin Change Password - reject same, wrong current, confirm misma
 
   try {
     await withServer(testApp, async (baseUrl) => {
+      const hashBeforeTests = storedHash;
+
+      // 0. Missing, whitespace-only, matching whitespace-only, and non-string inputs -> HTTP 400 without DB update
+      const invalidEmptyPayloads = [
+        { admin_new_password: 'AdminNewPass123!', admin_conform_password: 'AdminNewPass123!' },
+        { admin_current_password: initialPassword, admin_conform_password: 'AdminNewPass123!' },
+        { admin_current_password: initialPassword, admin_new_password: 'AdminNewPass123!' },
+        { admin_current_password: '      ', admin_new_password: 'AdminNewPass123!', admin_conform_password: 'AdminNewPass123!' },
+        { admin_current_password: initialPassword, admin_new_password: '      ', admin_conform_password: 'AdminNewPass123!' },
+        { admin_current_password: initialPassword, admin_new_password: 'AdminNewPass123!', admin_conform_password: '      ' },
+        { admin_current_password: initialPassword, admin_new_password: '      ', admin_conform_password: '      ' },
+        { admin_current_password: 123456, admin_new_password: ['a', 'b', 'c', 'd', 'e', 'f'], admin_conform_password: ['a', 'b', 'c', 'd', 'e', 'f'] },
+      ];
+      for (const payload of invalidEmptyPayloads) {
+        const res = await fetch(`${baseUrl}/api/admin/password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        assert.equal(res.status, 400);
+        assert.equal((await res.json()).error, 'Fill in all three password fields.');
+        assert.equal(storedHash, hashBeforeTests);
+      }
+
       // 1. Same password returns HTTP 400
       const sameRes = await fetch(`${baseUrl}/api/admin/password`, {
         method: 'POST',
@@ -176,6 +230,7 @@ test('Group B: Admin Change Password - reject same, wrong current, confirm misma
       assert.equal(sameRes.status, 400);
       const sameData = await sameRes.json();
       assert.equal(sameData.error, 'New Password cannot be the same as Current Password');
+      assert.equal(storedHash, hashBeforeTests);
 
       // 2. Incorrect current password returns HTTP 401
       const wrongRes = await fetch(`${baseUrl}/api/admin/password`, {
@@ -190,6 +245,7 @@ test('Group B: Admin Change Password - reject same, wrong current, confirm misma
       assert.equal(wrongRes.status, 401);
       const wrongData = await wrongRes.json();
       assert.equal(wrongData.error, 'Your current password is wrong.');
+      assert.equal(storedHash, hashBeforeTests);
 
       // 3. Confirmation mismatch returns HTTP 400
       const mismatchRes = await fetch(`${baseUrl}/api/admin/password`, {
@@ -204,6 +260,7 @@ test('Group B: Admin Change Password - reject same, wrong current, confirm misma
       assert.equal(mismatchRes.status, 400);
       const mismatchData = await mismatchRes.json();
       assert.equal(mismatchData.error, 'The new passwords do not match.');
+      assert.equal(storedHash, hashBeforeTests);
 
       // 4. Minimum length < 6 returns HTTP 400
       const shortRes = await fetch(`${baseUrl}/api/admin/password`, {
@@ -218,6 +275,7 @@ test('Group B: Admin Change Password - reject same, wrong current, confirm misma
       assert.equal(shortRes.status, 400);
       const shortData = await shortRes.json();
       assert.equal(shortData.error, 'New password must be at least 6 characters.');
+      assert.equal(storedHash, hashBeforeTests);
 
       // 5. Valid new password succeeds
       const successRes = await fetch(`${baseUrl}/api/admin/password`, {
@@ -232,6 +290,7 @@ test('Group B: Admin Change Password - reject same, wrong current, confirm misma
       assert.equal(successRes.status, 200);
       const successData = await successRes.json();
       assert.equal(successData.ok, true);
+      assert.notEqual(storedHash, hashBeforeTests);
       assert.ok(await bcrypt.compare('AdminNewPass123!', storedHash));
     });
   } finally {
@@ -400,7 +459,7 @@ test('Group D: Staff Login Status - case-insensitive Active, inactive/blocked re
         body: JSON.stringify({ email: 'statustest@example.com', password }),
       });
       assert.equal(r4.status, 403);
-      assert.equal((await r4.json()).error, 'Your staff account is not active. Wait for admin approval.');
+      assert.equal((await r4.json()).error, 'Your account has been deactivated by the Admin.');
 
       // 5. 'Blocked' rejected with 403
       mockStatus = 'Blocked';
@@ -410,6 +469,7 @@ test('Group D: Staff Login Status - case-insensitive Active, inactive/blocked re
         body: JSON.stringify({ email: 'statustest@example.com', password }),
       });
       assert.equal(r5.status, 403);
+      assert.equal((await r5.json()).error, 'Your account has been deactivated by the Admin.');
 
       // 6. null or missing status rejected with 403
       mockStatus = null;
@@ -419,6 +479,7 @@ test('Group D: Staff Login Status - case-insensitive Active, inactive/blocked re
         body: JSON.stringify({ email: 'statustest@example.com', password }),
       });
       assert.equal(r6.status, 403);
+      assert.equal((await r6.json()).error, 'Your account has been deactivated by the Admin.');
     });
   } finally {
     pool.query = origQuery;
@@ -446,7 +507,7 @@ test('Group E: Admin Registration Duplicate Mobile - email duplicate, mobile dup
         return { rows: [] };
       }
       if (sql.includes('SELECT 1 FROM admin WHERE LOWER(email)=$1')) {
-        if (params[0] === 'existing@admin.com') return { rowCount: 1, rows: [{ 1: 1 }] };
+        if (params[0] === 'existing@gmail.com') return { rowCount: 1, rows: [{ 1: 1 }] };
         return { rowCount: 0, rows: [] };
       }
       if (sql.includes('SELECT 1 FROM admin WHERE mobile=$1')) {
@@ -478,7 +539,7 @@ test('Group E: Admin Registration Duplicate Mobile - email duplicate, mobile dup
         body: JSON.stringify({
           adminName: 'Admin One',
           adminMobile: '8888888888',
-          adminEmail: 'existing@admin.com',
+          adminEmail: 'existing@gmail.com',
           adminPassword: 'Password123!',
           secretCode: 'secret123',
           securityQuestion: 'City?',
@@ -496,7 +557,7 @@ test('Group E: Admin Registration Duplicate Mobile - email duplicate, mobile dup
         body: JSON.stringify({
           adminName: 'Admin Two',
           adminMobile: '9999999999',
-          adminEmail: 'new@admin.com',
+          adminEmail: 'new@gmail.com',
           adminPassword: 'Password123!',
           secretCode: 'secret123',
           securityQuestion: 'City?',
@@ -514,7 +575,7 @@ test('Group E: Admin Registration Duplicate Mobile - email duplicate, mobile dup
         body: JSON.stringify({
           adminName: 'Admin Three',
           adminMobile: '7777777777',
-          adminEmail: 'unique@admin.com',
+          adminEmail: 'unique@gmail.com',
           adminPassword: 'Password123!',
           secretCode: 'secret123',
           securityQuestion: 'City?',
@@ -548,16 +609,16 @@ test('Group F: Staff Registration Duplicate Messages - separate errors, prioriti
         const email = params[0];
         const mobile = params[1];
         const rows = [];
-        if (email === 'staff_taken@example.com') rows.push({ email: 'staff_taken@example.com', mobile: '1111111111' });
-        if (mobile === '9999911111') rows.push({ email: 'other@example.com', mobile: '9999911111' });
+        if (email === 'staff_taken@gmail.com') rows.push({ email: 'staff_taken@gmail.com', mobile: '9876511111' });
+        if (mobile === '9999911111') rows.push({ email: 'other@gmail.com', mobile: '9999911111' });
         return { rowCount: rows.length, rows };
       }
       if (sql.includes('SELECT LOWER(email) AS email, mobile FROM staff_request WHERE')) {
         const email = params[0];
         const mobile = params[1];
         const rows = [];
-        if (email === 'req_taken@example.com') rows.push({ email: 'req_taken@example.com', mobile: '2222222222' });
-        if (mobile === '9999922222') rows.push({ email: 'reqother@example.com', mobile: '9999922222' });
+        if (email === 'req_taken@gmail.com') rows.push({ email: 'req_taken@gmail.com', mobile: '9876522222' });
+        if (mobile === '9999922222') rows.push({ email: 'reqother@gmail.com', mobile: '9999922222' });
         return { rowCount: rows.length, rows };
       }
       if (sql.includes('SUBSTRING(request_id')) {
@@ -583,7 +644,7 @@ test('Group F: Staff Registration Duplicate Messages - separate errors, prioriti
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          staffName: 'Staff Member', staffMobile: '5555555555', staffEmail: 'staff_taken@example.com',
+          staffName: 'Staff Member', staffMobile: '9876533333', staffEmail: 'staff_taken@gmail.com',
           department: 'Electricity', staffPassword: 'Password123!', securityQuestion: 'Q?', securityAnswer: 'A',
         }),
       });
@@ -595,7 +656,7 @@ test('Group F: Staff Registration Duplicate Messages - separate errors, prioriti
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          staffName: 'Staff Member', staffMobile: '9999911111', staffEmail: 'free@example.com',
+          staffName: 'Staff Member', staffMobile: '9999911111', staffEmail: 'free@gmail.com',
           department: 'Electricity', staffPassword: 'Password123!', securityQuestion: 'Q?', securityAnswer: 'A',
         }),
       });
@@ -607,7 +668,7 @@ test('Group F: Staff Registration Duplicate Messages - separate errors, prioriti
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          staffName: 'Staff Member', staffMobile: '5555555555', staffEmail: 'req_taken@example.com',
+          staffName: 'Staff Member', staffMobile: '9876544444', staffEmail: 'req_taken@gmail.com',
           department: 'Electricity', staffPassword: 'Password123!', securityQuestion: 'Q?', securityAnswer: 'A',
         }),
       });
@@ -619,7 +680,7 @@ test('Group F: Staff Registration Duplicate Messages - separate errors, prioriti
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          staffName: 'Staff Member', staffMobile: '9999922222', staffEmail: 'free@example.com',
+          staffName: 'Staff Member', staffMobile: '9999922222', staffEmail: 'free@gmail.com',
           department: 'Electricity', staffPassword: 'Password123!', securityQuestion: 'Q?', securityAnswer: 'A',
         }),
       });
@@ -631,26 +692,50 @@ test('Group F: Staff Registration Duplicate Messages - separate errors, prioriti
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          staffName: 'Staff Member', staffMobile: '9999911111', staffEmail: 'staff_taken@example.com',
+          staffName: 'Staff Member', staffMobile: '9999911111', staffEmail: 'staff_taken@gmail.com',
           department: 'Electricity', staffPassword: 'Password123!', securityQuestion: 'Q?', securityAnswer: 'A',
         }),
       });
       assert.equal(r5.status, 409);
       assert.equal((await r5.json()).error, 'Email Already Registered');
 
-      // 6. Unique credentials succeeds
+      // 6. Unique credentials succeeds with hyphenated REQ-XXXX format
       const r6 = await fetch(`${baseUrl}/api/auth/staff/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          staffName: 'New Staff Member', staffMobile: '7777788888', staffEmail: 'brand_new@example.com',
+          staffName: 'New Staff Member', staffMobile: '7777788888', staffEmail: 'brand_new@gmail.com',
           department: 'Electricity', staffPassword: 'Password123!', securityQuestion: 'Q?', securityAnswer: 'A',
         }),
       });
       assert.equal(r6.status, 201);
       const d6 = await r6.json();
       assert.equal(d6.ok, true);
-      assert.ok(d6.requestId);
+      assert.equal(d6.requestId, 'REQ-0011');
+
+      // 7. Invalid Indian mobile number rejected with HTTP 400
+      const r7 = await fetch(`${baseUrl}/api/auth/staff/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          staffName: 'Staff Invalid Mobile', staffMobile: '1234567890', staffEmail: 'valid@gmail.com',
+          department: 'Electricity', staffPassword: 'Password123!', securityQuestion: 'Q?', securityAnswer: 'A',
+        }),
+      });
+      assert.equal(r7.status, 400);
+      assert.equal((await r7.json()).error, 'Enter a valid 10-digit Indian mobile number.');
+
+      // 8. Invalid non-Gmail email rejected with HTTP 400
+      const r8 = await fetch(`${baseUrl}/api/auth/staff/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          staffName: 'Staff Invalid Email', staffMobile: '9876543210', staffEmail: 'staff@yahoo.com',
+          department: 'Electricity', staffPassword: 'Password123!', securityQuestion: 'Q?', securityAnswer: 'A',
+        }),
+      });
+      assert.equal(r8.status, 400);
+      assert.equal((await r8.json()).error, 'Enter a valid Gmail address.');
     });
   } finally {
     pool.query = origQuery;
@@ -1161,4 +1246,424 @@ test('Test H: Existing Authentication Regression', async () => {
   } finally {
     pool.query = origQuery;
   }
+});
+
+// -------------------------------------------------------------
+// TEST GROUP I: Phase 5 Staff Forgot Password Template Display
+// -------------------------------------------------------------
+test('Group I: Staff Forgot Password HTML template displays retrieved password and copy button on AJAX reset', () => {
+  const html = fs.readFileSync('web/HTML/STAFF/staff_forgot_password.html', 'utf8');
+  assert.ok(html.includes('showRetrievedPassword(d.password)'), 'AJAX success callback must invoke showRetrievedPassword');
+  assert.ok(html.includes('passwordGroup.style.display = "block"'), 'Must unhide passwordGroup container');
+  assert.ok(html.includes('id="copyPassword"'), 'Must contain copyPassword button');
+});
+
+// -------------------------------------------------------------
+// TEST GROUP J: Phase 5 Staff Request ID Compatibility (REQ-0001 & REQ0001)
+// -------------------------------------------------------------
+test('Group J: Staff Request ID - Admin approve and reject support both REQ-0001 and legacy REQ0001 formats', async () => {
+  const origQuery = pool.query;
+  const origConnect = pool.connect;
+
+  const mockRequests = [
+    { request_id: 'REQ-0001', staff_name: 'Hyphen Staff', email: 'hyphen@gmail.com', mobile: '9876500001', department: 'Cleanliness', password: 'Hash', security_question: 'Q', security_answer: 'A' },
+    { request_id: 'REQ0002', staff_name: 'Legacy Staff', email: 'legacy@gmail.com', mobile: '9876500002', department: 'Internet', password: 'Hash', security_question: 'Q', security_answer: 'A' },
+  ];
+
+  pool.query = async (sql, params = []) => {
+    if (sql.includes('FROM staff s')) {
+      return { rows: [] };
+    }
+    if (sql.includes('FROM staff_request ORDER BY created_at')) {
+      return { rows: mockRequests };
+    }
+    if (sql.includes('DELETE FROM staff_request WHERE request_id = ANY($1) RETURNING request_id')) {
+      const candidates = params[0];
+      const idx = mockRequests.findIndex((r) => candidates.includes(r.request_id));
+      if (idx !== -1) {
+        const removed = mockRequests.splice(idx, 1);
+        return { rowCount: 1, rows: [{ request_id: removed[0].request_id }] };
+      }
+      return { rowCount: 0, rows: [] };
+    }
+    return origQuery.call(pool, sql, params);
+  };
+
+  pool.connect = async () => ({
+    async query(sql, params = []) {
+      if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK' || sql.includes('pg_advisory_xact_lock')) {
+        return { rows: [] };
+      }
+      if (sql.includes('SELECT * FROM staff_request WHERE request_id = ANY($1) FOR UPDATE')) {
+        const candidates = params[0];
+        const row = mockRequests.find((r) => candidates.includes(r.request_id));
+        return { rowCount: row ? 1 : 0, rows: row ? [row] : [] };
+      }
+      if (sql.includes('SELECT 1 FROM staff WHERE LOWER(email) = $1 OR mobile = $2')) {
+        return { rowCount: 0, rows: [] };
+      }
+      if (sql.includes('SUBSTRING(staff_id')) {
+        return { rows: [{ n: 1 }] };
+      }
+      if (sql.includes('INSERT INTO staff')) {
+        return { rowCount: 1 };
+      }
+      if (sql.includes('DELETE FROM staff_request WHERE request_id = $1')) {
+        const idx = mockRequests.findIndex((r) => r.request_id === params[0]);
+        if (idx !== -1) mockRequests.splice(idx, 1);
+        return { rowCount: 1 };
+      }
+      return { rowCount: 0, rows: [] };
+    },
+    release() {},
+  });
+
+  const testApp = express();
+  testApp.use(express.json());
+  testApp.use(session({ secret: 'test-secret', resave: false, saveUninitialized: false, name: 'gms.sid' }));
+  testApp.use((req, _res, next) => {
+    req.session.admin = { id: 'ADM-0001', name: 'Test Admin', email: 'admin@example.com' };
+    next();
+  });
+  testApp.use('/api/admin', adminRouter);
+
+  try {
+    await withServer(testApp, async (baseUrl) => {
+      // 1. GET /api/admin/staff formats both REQ-0001 and REQ0002 with standard REQ- prefix
+      const staffRes = await fetch(`${baseUrl}/api/admin/staff`);
+      assert.equal(staffRes.status, 200);
+      const staffData = await staffRes.json();
+      const req1 = staffData.staff.find((s) => s.staffName === 'Hyphen Staff');
+      const req2 = staffData.staff.find((s) => s.staffName === 'Legacy Staff');
+      assert.equal(req1.staffId, 'REQ-0001');
+      assert.equal(req2.staffId, 'REQ-0002');
+
+      // 2. Approve hyphenated request
+      const approveRes = await fetch(`${baseUrl}/api/admin/staff-requests/REQ-0001/approve`, { method: 'POST' });
+      assert.equal(approveRes.status, 200);
+      const approveData = await approveRes.json();
+      assert.equal(approveData.ok, true);
+
+      // 3. Reject legacy request
+      const rejectRes = await fetch(`${baseUrl}/api/admin/staff-requests/REQ-0002/reject`, { method: 'POST' });
+      assert.equal(rejectRes.status, 200);
+      const rejectData = await rejectRes.json();
+      assert.equal(rejectData.ok, true);
+    });
+  } finally {
+    pool.query = origQuery;
+    pool.connect = origConnect;
+  }
+});
+
+// -------------------------------------------------------------
+// TEST GROUP K: Phase 7 Admin Signup Backend Format Validation
+// -------------------------------------------------------------
+test('Group K: Admin Registration Format Validation - reject invalid mobile, reject invalid email, and accept valid format', async () => {
+  const origQuery = pool.query;
+  const origConnect = pool.connect;
+  const adminSecretHash = await bcrypt.hash('secret123', 10);
+
+  pool.query = async (sql, params = []) => {
+    if (sql.includes('SELECT secret_code FROM admin_secret WHERE id = 1')) {
+      return { rowCount: 1, rows: [{ secret_code: adminSecretHash }] };
+    }
+    return origQuery.call(pool, sql, params);
+  };
+
+  pool.connect = async () => ({
+    async query(sql) {
+      if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK' || sql.includes('pg_advisory_xact_lock')) {
+        return { rows: [] };
+      }
+      if (sql.includes('SELECT 1 FROM admin WHERE LOWER(email)=$1')) {
+        return { rowCount: 0, rows: [] };
+      }
+      if (sql.includes('SELECT 1 FROM admin WHERE mobile=$1')) {
+        return { rowCount: 0, rows: [] };
+      }
+      if (sql.includes('SUBSTRING(admin_id')) {
+        return { rows: [{ n: 10 }] };
+      }
+      if (sql.includes('INSERT INTO admin')) {
+        return { rowCount: 1 };
+      }
+      return { rowCount: 0, rows: [] };
+    },
+    release() {},
+  });
+
+  const testApp = express();
+  testApp.use(express.json());
+  testApp.use(session({ secret: 'test-secret', resave: false, saveUninitialized: false, name: 'gms.sid' }));
+  testApp.use('/api/auth', authRouter);
+
+  try {
+    await withServer(testApp, async (baseUrl) => {
+      // 1. Invalid Indian mobile number rejected with HTTP 400
+      const invalidMobileRes = await fetch(`${baseUrl}/api/auth/admin/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminName: 'Admin One',
+          adminMobile: '1234567890',
+          adminEmail: 'valid@gmail.com',
+          adminPassword: 'Password123!',
+          secretCode: 'secret123',
+          securityQuestion: 'City?',
+          securityAnswer: 'Delhi',
+        }),
+      });
+      assert.equal(invalidMobileRes.status, 400);
+      const invalidMobileData = await invalidMobileRes.json();
+      assert.equal(invalidMobileData.error, 'Enter a valid 10-digit Indian mobile number.');
+
+      // 2. Invalid non-Gmail email rejected with HTTP 400
+      const invalidEmailRes = await fetch(`${baseUrl}/api/auth/admin/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminName: 'Admin Two',
+          adminMobile: '9876543210',
+          adminEmail: 'admin@yahoo.com',
+          adminPassword: 'Password123!',
+          secretCode: 'secret123',
+          securityQuestion: 'City?',
+          securityAnswer: 'Delhi',
+        }),
+      });
+      assert.equal(invalidEmailRes.status, 400);
+      const invalidEmailData = await invalidEmailRes.json();
+      assert.equal(invalidEmailData.error, 'Enter a valid Gmail address.');
+
+      // 3. Valid mobile & Gmail accepted with HTTP 201
+      const validRes = await fetch(`${baseUrl}/api/auth/admin/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminName: 'Admin Valid',
+          adminMobile: '9876543210',
+          adminEmail: 'validadmin@gmail.com',
+          adminPassword: 'Password123!',
+          secretCode: 'secret123',
+          securityQuestion: 'City?',
+          securityAnswer: 'Delhi',
+        }),
+      });
+      assert.equal(validRes.status, 201);
+      const validData = await validRes.json();
+      assert.equal(validData.ok, true);
+      assert.equal(validData.adminId, 'ADM-0011');
+      assert.equal(validData.redirect, '/HTML/ADMIN/admin_login.html');
+    });
+  } finally {
+    pool.query = origQuery;
+    pool.connect = origConnect;
+  }
+});
+
+// -------------------------------------------------------------
+// TEST GROUP L: Phase 7 Admin Forgot Password Template Display
+// -------------------------------------------------------------
+test('Group L: Admin Forgot Password HTML template displays retrieved password and copy button on AJAX reset', () => {
+  const html = fs.readFileSync('web/HTML/ADMIN/admin_forgot_password.html', 'utf8');
+  assert.ok(html.includes('showRetrievedPassword(d.password)'), 'AJAX success callback must invoke showRetrievedPassword');
+  assert.ok(html.includes('passwordGroup.style.display = "block"'), 'Must unhide passwordGroup container');
+  assert.ok(html.includes('id="copyPassword"'), 'Must contain copyPassword button');
+});
+
+// -------------------------------------------------------------
+// TEST GROUP M: Phase 8 Admin Direct Staff Creation Validation & Duplicate Detection
+// -------------------------------------------------------------
+test('Group M: Admin direct staff creation - validate Indian mobile, Gmail, and separate duplicate checks for staff and staff_request', async () => {
+  const origQuery = pool.query;
+  const origConnect = pool.connect;
+
+  const existingStaffRows = [
+    { email: 'existingstaff@gmail.com', mobile: '9876543210' },
+  ];
+  const pendingRequestRows = [
+    { email: 'pendingrequest@gmail.com', mobile: '8765432109' },
+  ];
+
+  pool.query = async (sql, params = []) => {
+    return origQuery.call(pool, sql, params);
+  };
+
+  pool.connect = async () => ({
+    async query(sql, params = []) {
+      if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK' || sql.includes('pg_advisory_xact_lock')) {
+        return { rows: [] };
+      }
+      if (sql.includes('FROM staff WHERE LOWER(email) = $1 OR mobile = $2')) {
+        const [email, mobile] = params;
+        const matched = existingStaffRows.filter(
+          (r) => r.email === email || r.mobile === mobile
+        );
+        return { rowCount: matched.length, rows: matched };
+      }
+      if (sql.includes('FROM staff_request WHERE LOWER(email) = $1 OR mobile = $2')) {
+        const [email, mobile] = params;
+        const matched = pendingRequestRows.filter(
+          (r) => r.email === email || r.mobile === mobile
+        );
+        return { rowCount: matched.length, rows: matched };
+      }
+      if (sql.includes('SUBSTRING(staff_id')) {
+        return { rows: [{ n: 10 }] };
+      }
+      if (sql.includes('INSERT INTO staff')) {
+        return { rowCount: 1 };
+      }
+      return { rowCount: 0, rows: [] };
+    },
+    release() {},
+  });
+
+  const testApp = express();
+  testApp.use(express.json());
+  testApp.use(session({ secret: 'test-secret', resave: false, saveUninitialized: false, name: 'gms.sid' }));
+  testApp.use((req, _res, next) => {
+    req.session.admin = { id: 'ADM-0001', name: 'Test Admin', email: 'admin@gmail.com' };
+    next();
+  });
+  testApp.use('/api/admin', adminRouter);
+
+  try {
+    await withServer(testApp, async (baseUrl) => {
+      const baseBody = {
+        name: 'New Staff',
+        mobile: '9123456780',
+        email: 'newstaff@gmail.com',
+        department: 'Library',
+        password: 'ValidPassword123!',
+        securityQuestion: 'Favorite Subject?',
+        securityAnswer: 'Math',
+      };
+
+      // 1. Missing required field -> HTTP 400 'Fill in every field before adding staff.'
+      const missingFieldRes = await fetch(`${baseUrl}/api/admin/staff`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...baseBody, name: '' }),
+      });
+      assert.equal(missingFieldRes.status, 400);
+      const missingFieldData = await missingFieldRes.json();
+      assert.equal(missingFieldData.error, 'Fill in every field before adding staff.');
+
+      // 2. Invalid Indian mobile -> HTTP 400 'Enter a valid 10-digit Indian mobile number.'
+      const invalidMobileRes = await fetch(`${baseUrl}/api/admin/staff`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...baseBody, mobile: '1234567890' }),
+      });
+      assert.equal(invalidMobileRes.status, 400);
+      const invalidMobileData = await invalidMobileRes.json();
+      assert.equal(invalidMobileData.error, 'Enter a valid 10-digit Indian mobile number.');
+
+      // 3. Invalid non-Gmail email -> HTTP 400 'Enter a valid Gmail address.'
+      const invalidEmailRes = await fetch(`${baseUrl}/api/admin/staff`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...baseBody, email: 'newstaff@yahoo.com' }),
+      });
+      assert.equal(invalidEmailRes.status, 400);
+      const invalidEmailData = await invalidEmailRes.json();
+      assert.equal(invalidEmailData.error, 'Enter a valid Gmail address.');
+
+      // 4. Short password (< 6 chars) -> HTTP 400 'Password must be at least 6 characters.'
+      const shortPassRes = await fetch(`${baseUrl}/api/admin/staff`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...baseBody, password: '123' }),
+      });
+      assert.equal(shortPassRes.status, 400);
+      const shortPassData = await shortPassRes.json();
+      assert.equal(shortPassData.error, 'Password must be at least 6 characters.');
+
+      // 5. Existing staff email duplicate -> HTTP 409 'Email Already Exists'
+      const dupStaffEmailRes = await fetch(`${baseUrl}/api/admin/staff`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...baseBody, email: 'existingstaff@gmail.com' }),
+      });
+      assert.equal(dupStaffEmailRes.status, 409);
+      const dupStaffEmailData = await dupStaffEmailRes.json();
+      assert.equal(dupStaffEmailData.error, 'Email Already Exists');
+
+      // 6. Existing staff mobile duplicate -> HTTP 409 'Mobile Already Exists'
+      const dupStaffMobileRes = await fetch(`${baseUrl}/api/admin/staff`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...baseBody, mobile: '9876543210' }),
+      });
+      assert.equal(dupStaffMobileRes.status, 409);
+      const dupStaffMobileData = await dupStaffMobileRes.json();
+      assert.equal(dupStaffMobileData.error, 'Mobile Already Exists');
+
+      // 7. Both existing staff email AND mobile duplicate -> HTTP 409 'Email Already Exists' (email precedence)
+      const dupStaffBothRes = await fetch(`${baseUrl}/api/admin/staff`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...baseBody, email: 'existingstaff@gmail.com', mobile: '9876543210' }),
+      });
+      assert.equal(dupStaffBothRes.status, 409);
+      const dupStaffBothData = await dupStaffBothRes.json();
+      assert.equal(dupStaffBothData.error, 'Email Already Exists');
+
+      // 8. Pending request email duplicate -> HTTP 409 'Email Already Requested'
+      const dupReqEmailRes = await fetch(`${baseUrl}/api/admin/staff`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...baseBody, email: 'pendingrequest@gmail.com' }),
+      });
+      assert.equal(dupReqEmailRes.status, 409);
+      const dupReqEmailData = await dupReqEmailRes.json();
+      assert.equal(dupReqEmailData.error, 'Email Already Requested');
+
+      // 9. Pending request mobile duplicate -> HTTP 409 'Mobile Number Already Requested'
+      const dupReqMobileRes = await fetch(`${baseUrl}/api/admin/staff`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...baseBody, mobile: '8765432109' }),
+      });
+      assert.equal(dupReqMobileRes.status, 409);
+      const dupReqMobileData = await dupReqMobileRes.json();
+      assert.equal(dupReqMobileData.error, 'Mobile Number Already Requested');
+
+      // 10. Both pending request email AND mobile duplicate -> HTTP 409 'Email Already Requested' (email precedence)
+      const dupReqBothRes = await fetch(`${baseUrl}/api/admin/staff`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...baseBody, email: 'pendingrequest@gmail.com', mobile: '8765432109' }),
+      });
+      assert.equal(dupReqBothRes.status, 409);
+      const dupReqBothData = await dupReqBothRes.json();
+      assert.equal(dupReqBothData.error, 'Email Already Requested');
+
+      // 11. Valid direct creation -> HTTP 201 with generated staffId
+      const validRes = await fetch(`${baseUrl}/api/admin/staff`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(baseBody),
+      });
+      assert.equal(validRes.status, 201);
+      const validData = await validRes.json();
+      assert.equal(validData.ok, true);
+      assert.equal(validData.staffId, 'STF-0011');
+      assert.equal(validData.message, 'Staff member New Staff was added as STF-0011.');
+    });
+  } finally {
+    pool.query = origQuery;
+    pool.connect = origConnect;
+  }
+});
+
+// -------------------------------------------------------------
+// TEST GROUP N: Phase 8 Admin Staff HTML Empty State Label
+// -------------------------------------------------------------
+test('Group N: Admin Staff HTML template displays "No Staff Found" empty state and no students label', () => {
+  const html = fs.readFileSync('web/HTML/ADMIN/staff.html', 'utf8');
+  assert.ok(html.includes('No Staff Found'), 'Staff table must display "No Staff Found" when page data is empty');
+  assert.ok(!html.includes('No Students Found'), 'Staff table must not display "No Students Found"');
 });

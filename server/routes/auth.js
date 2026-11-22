@@ -12,6 +12,8 @@ function fail(res, status, message) {
 }
 
 const RESET_MAX_FAILURES = 5;
+const INDIAN_MOBILE_RE = /^[6-9]\d{9}$/;
+const GMAIL_RE = /^[a-z0-9._%+-]+@gmail\.com$/;
 
 function clean(v) {
   return typeof v === 'string' ? v.trim() : '';
@@ -19,29 +21,115 @@ function clean(v) {
 
 router.nextId = nextId;
 
-async function findUserForLogin(table, identifier, password) {
-  if (!identifier || !password) {
+function resolveIdentifier(body, rolePrefix) {
+  const b = body || {};
+  const emailKey = `${rolePrefix}Email`;
+  const mobileKey = `${rolePrefix}Mobile`;
+
+  const hasMobileKey = mobileKey in b || 'mobile' in b;
+  const hasEmailKey = emailKey in b || 'email' in b;
+
+  let rawValue;
+  let kind = 'email';
+
+  if (hasMobileKey && !hasEmailKey) {
+    kind = 'mobile';
+    rawValue = b[mobileKey] !== undefined ? b[mobileKey] : b.mobile;
+  } else if (hasEmailKey && !hasMobileKey) {
+    rawValue = b[emailKey] !== undefined ? b[emailKey] : b.email;
+    if (typeof rawValue === 'string' && /^\d+$/.test(rawValue.trim())) {
+      kind = 'mobile';
+    } else {
+      kind = 'email';
+    }
+  } else if (hasEmailKey && hasMobileKey) {
+    const rawMobile = b[mobileKey] !== undefined ? b[mobileKey] : b.mobile;
+    const rawEmail = b[emailKey] !== undefined ? b[emailKey] : b.email;
+    if (clean(rawMobile)) {
+      kind = 'mobile';
+      rawValue = rawMobile;
+    } else if (clean(rawEmail)) {
+      kind = 'email';
+      rawValue = rawEmail;
+    } else if (rawMobile !== undefined) {
+      kind = 'mobile';
+      rawValue = rawMobile;
+    } else {
+      kind = 'email';
+      rawValue = rawEmail;
+    }
+  } else if ('identifier' in b) {
+    rawValue = b.identifier;
+    if (typeof rawValue === 'string' && /^\d+$/.test(rawValue.trim())) {
+      kind = 'mobile';
+    } else {
+      kind = 'email';
+    }
+  } else {
+    kind = 'email';
+    rawValue = undefined;
+  }
+
+  const value = clean(rawValue);
+  const isPresent = Boolean(rawValue !== null && rawValue !== undefined && value !== '');
+
+  return { value, kind, isPresent };
+}
+
+async function findUserForLogin(table, body, rolePrefix, password) {
+  const ident = resolveIdentifier(body, rolePrefix);
+  if (!ident.isPresent) {
+    return {
+      error: {
+        status: 400,
+        message: ident.kind === 'mobile' ? 'Invalid Mobile Number' : 'Invalid Email',
+      },
+    };
+  }
+
+  if (!password) {
     return { error: { status: 400, message: 'Enter your email and password.' } };
   }
 
   const { rows } = await pool.query(
     `SELECT * FROM ${table} WHERE LOWER(email) = LOWER($1) OR mobile = $1`,
-    [identifier]
+    [ident.value]
   );
 
-  if (!rows || rows.length === 0) {
-    return { notFound: true, error: { status: 401, message: 'Email or password is incorrect.' } };
-  }
-
-  let candidates = rows;
-  if (candidates.length > 1) {
-    if (identifier.includes('@')) {
-      candidates = candidates.filter(
-        (r) => r.email && r.email.toLowerCase() === identifier.toLowerCase()
-      );
-    } else {
-      candidates = candidates.filter((r) => r.mobile && r.mobile === identifier);
+  const candidates = (rows || []).filter((r) => {
+    if (ident.kind === 'mobile') {
+      return Boolean(r.mobile && r.mobile === ident.value);
     }
+    return Boolean(r.email && r.email.toLowerCase() === ident.value.toLowerCase());
+  });
+
+  if (candidates.length === 0) {
+    if (table === 'staff') {
+      const pendingRes = await pool.query(
+        `SELECT 1
+         FROM staff_request
+         WHERE LOWER(email) = LOWER($1) OR mobile = $1
+         LIMIT 1`,
+        [ident.value]
+      );
+      if (pendingRes.rowCount || (pendingRes.rows && pendingRes.rows.length > 0)) {
+        return {
+          error: {
+            status: 403,
+            message:
+              'Your registration request is pending Admin approval. Please wait until your account is approved.',
+          },
+        };
+      }
+    }
+
+    return {
+      notFound: true,
+      error: {
+        status: 401,
+        message: ident.kind === 'mobile' ? 'Invalid Mobile Number' : 'Invalid Email',
+      },
+    };
   }
 
   let matchedUser = null;
@@ -64,9 +152,8 @@ async function findUserForLogin(table, identifier, password) {
 // Students
 
 router.post('/student/login', wrap(async (req, res) => {
-  const identifier = clean(req.body.studentEmail || req.body.email || req.body.studentMobile || req.body.mobile || req.body.identifier);
   const password = req.body.studentPassword || req.body.password || '';
-  const result = await findUserForLogin('student', identifier, password);
+  const result = await findUserForLogin('student', req.body, 'student', password);
   if (result.error) return fail(res, result.error.status, result.error.message);
   const user = result.user;
   if ((user.status || '').toLowerCase() !== 'active') return fail(res, 403, 'This student account is blocked. Contact the admin.');
@@ -115,28 +202,11 @@ router.post('/student/signup', wrap(async (req, res) => {
 // Staff
 
 router.post('/staff/login', wrap(async (req, res) => {
-  const identifier = clean(req.body.staffEmail || req.body.email || req.body.staffMobile || req.body.mobile || req.body.identifier);
   const password = req.body.staffPassword || req.body.password || '';
-  const result = await findUserForLogin('staff', identifier, password);
-  if (result.notFound && identifier) {
-    const pending = await pool.query(
-      `SELECT 1
-       FROM staff_request
-       WHERE LOWER(email) = LOWER($1) OR mobile = $1
-       LIMIT 1`,
-      [identifier]
-    );
-    if (pending.rowCount) {
-      return fail(
-        res,
-        403,
-        'Your registration request is pending Admin approval. Please wait until your account is approved.'
-      );
-    }
-  }
+  const result = await findUserForLogin('staff', req.body, 'staff', password);
   if (result.error) return fail(res, result.error.status, result.error.message);
   const user = result.user;
-  if ((user.status || '').toLowerCase() !== 'active') return fail(res, 403, 'Your staff account is not active. Wait for admin approval.');
+  if ((user.status || '').toLowerCase() !== 'active') return fail(res, 403, 'Your account has been deactivated by the Admin.');
   req.session.staff = { id: user.staff_id, name: user.staff_name, email: user.email, department: user.department };
   res.json({ ok: true, redirect: '/HTML/STAFF/staff_dashboard.html' });
 }));
@@ -151,6 +221,12 @@ router.post('/staff/signup', wrap(async (req, res) => {
   const answer = clean(req.body.securityAnswer);
   if (!name || !mobile || !email || !department || !password || !question || !answer) {
     return fail(res, 400, 'Fill in every field to request a staff account.');
+  }
+  if (!INDIAN_MOBILE_RE.test(mobile)) {
+    return fail(res, 400, 'Enter a valid 10-digit Indian mobile number.');
+  }
+  if (!GMAIL_RE.test(email)) {
+    return fail(res, 400, 'Enter a valid Gmail address.');
   }
   if (password.length < 6) return fail(res, 400, 'Password must be at least 6 characters.');
   const outcome = await withIdLock(pool, 'staff_request', async (client) => {
@@ -192,9 +268,8 @@ router.post('/staff/signup', wrap(async (req, res) => {
 // Admins
 
 router.post('/admin/login', wrap(async (req, res) => {
-  const identifier = clean(req.body.adminEmail || req.body.email || req.body.adminMobile || req.body.mobile || req.body.identifier);
   const password = req.body.adminPassword || req.body.password || '';
-  const result = await findUserForLogin('admin', identifier, password);
+  const result = await findUserForLogin('admin', req.body, 'admin', password);
   if (result.error) return fail(res, result.error.status, result.error.message);
   const user = result.user;
   req.session.admin = { id: user.admin_id, name: user.admin_name, email: user.email };
@@ -211,6 +286,12 @@ router.post('/admin/signup', wrap(async (req, res) => {
   const answer = clean(req.body.securityAnswer);
   if (!name || !mobile || !email || !password || !code || !question || !answer) {
     return fail(res, 400, 'Fill in every field, including the admin code.');
+  }
+  if (!INDIAN_MOBILE_RE.test(mobile)) {
+    return fail(res, 400, 'Enter a valid 10-digit Indian mobile number.');
+  }
+  if (!GMAIL_RE.test(email)) {
+    return fail(res, 400, 'Enter a valid Gmail address.');
   }
   if (password.length < 6) return fail(res, 400, 'Password must be at least 6 characters.');
   const secret = await pool.query('SELECT secret_code FROM admin_secret WHERE id = 1');
@@ -278,7 +359,7 @@ router.post('/:role/reset-password', wrap(async (req, res) => {
         );
       }
     }
-    return fail(res, 404, `No ${config.label} account uses that email. Check the address or sign up first.`);
+    return fail(res, 404, `No ${config.label} account uses that email.`);
   }
 
   const { rows: recent } = await pool.query(
@@ -290,7 +371,8 @@ router.post('/:role/reset-password', wrap(async (req, res) => {
     return fail(res, 429, 'Too many wrong answers. Wait 15 minutes, then try again.');
   }
 
-  if (account.security_question !== question || account.security_answer.toLowerCase() !== answer) {
+  const storedAnswer = clean(account.security_answer).toLowerCase();
+  if (account.security_question !== question || !storedAnswer || storedAnswer !== answer) {
     await pool.query('INSERT INTO reset_attempt (email, role) VALUES ($1, $2)', [email, req.params.role]);
     return fail(res, 403, 'The security question or answer does not match. Check them and try again.');
   }
@@ -309,7 +391,25 @@ router.get('/session', (req, res) => {
 });
 
 router.post('/logout', (req, res) => {
-  req.session.destroy(() => res.json({ ok: true, redirect: '/Home.html' }));
+  const clearCookie = () => {
+    res.clearCookie('gms.sid', {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
+  };
+  if (!req.session) {
+    clearCookie();
+    return res.json({ ok: true, redirect: '/Home.html' });
+  }
+  req.session.destroy((err) => {
+    if (err) {
+      return fail(res, 500, 'Could not sign you out right now. Please try again.');
+    }
+    clearCookie();
+    res.json({ ok: true, redirect: '/Home.html' });
+  });
 });
 
 module.exports = router;

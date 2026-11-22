@@ -150,12 +150,6 @@
 
                     </table>
 
-                    <div id="timelinePanel" style="display:none;margin-top:20px;">
-                        <h3 id="timelineTitle"></h3>
-                        <p id="timelineStatus" style="display:none;"></p>
-                        <ol class="timeline" id="timelineList"></ol>
-                    </div>
-
                 </div>
 
                 <div class="pagination">
@@ -278,42 +272,6 @@
                     return match ? "CMP-" + match[1].padStart(4, "0") : raw;
                 }
 
-                // Opens the case timeline for one complaint. Text is set with textContent, never as HTML.
-                async function openTimeline(complaintId){
-                    const panel=document.getElementById("timelinePanel");
-                    const list=document.getElementById("timelineList");
-                    const status=document.getElementById("timelineStatus");
-                    document.getElementById("timelineTitle").textContent="Case timeline: "+formatComplaintId(complaintId);
-                    list.innerHTML="";
-                    status.style.display="none";
-                    panel.style.display="block";
-                    try{
-                        const data=await GMS.get("/api/student/complaints/"+encodeURIComponent(complaintId)+"/timeline");
-                        if(!data.events || !data.events.length){
-                            GMS.notify(status,"No activity has been recorded for this complaint yet.",false);
-                            return;
-                        }
-                        data.events.forEach(function(ev){
-                            const li=document.createElement("li");
-                            const text=document.createElement("span");
-                            text.textContent=ev.message;
-                            const meta=document.createElement("span");
-                            meta.className="timeline-meta";
-                            meta.textContent=GMSDate.formatDateTime(ev.at);
-                            li.appendChild(text);
-                            li.appendChild(meta);
-                            list.appendChild(li);
-                        });
-                    }catch(err){
-                        GMS.notify(status,err.message,true);
-                    }
-                }
-
-                document.getElementById("myComplaints").addEventListener("click",function(e){
-                    const btn=e.target.closest(".timeline-open");
-                    if(btn) openTimeline(btn.dataset.id);
-                });
-
                 function renderTable(){
 
                     const tbody=document.getElementById("myComplaints");
@@ -373,7 +331,7 @@
 
                             <tr>
 
-                                <td><button type="button" class="timeline-open" data-id="${escapeText(c.complaintId)}" style="background:none;border:0;padding:0;color:#2563eb;font:inherit;cursor:pointer;text-decoration:underline;">${displayId}</button></td>
+                                <td>${displayId}</td>
 
                                 <td>${escapeText(c.category)}</td>
 
@@ -387,7 +345,6 @@
                                     <span class="badge ${badge}">
                                         ${displayStatus}
                                     </span>
-                                    ${c.overdue ? '<span class="badge badge-overdue" style="margin-left:4px;">Overdue</span>' : ""}
                                 </td>
 
                                 <td>${displayType}</td>

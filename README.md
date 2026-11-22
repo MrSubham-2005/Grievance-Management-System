@@ -360,13 +360,13 @@ Errors return a JSON body with an `error` message that names the problem and the
 
 Screenshots are added after the first production deploy. Replace each path with a file under `docs/screenshots/`.
 
-| Desktop | Mobile | Dashboard |
+| Home | Signup | Login |
 | :---: | :---: | :---: |
-| `docs/screenshots/desktop.png` _(pending)_ | `docs/screenshots/mobile.png` _(pending)_ | `docs/screenshots/dashboard.png` _(pending)_ |
+| `docs/screenshots/desktop.png` _(pending)_ | `docs/screenshots/signup.png` _(pending)_ | `docs/screenshots/login.png` _(pending)_ |
 
-| Authentication | Settings | Analytics |
+| Dashboard | New Complaint | Feedback |
 | :---: | :---: | :---: |
-| `docs/screenshots/auth.png` _(pending)_ | `docs/screenshots/settings.png` _(pending)_ | `docs/screenshots/analytics.png` _(pending)_ |
+| `docs/screenshots/dashboard.png` _(pending)_ | `docs/screenshots/complaint.png` _(pending)_ | `docs/screenshots/feedback.png` _(pending)_ |
 
 ---
 

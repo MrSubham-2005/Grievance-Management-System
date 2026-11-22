@@ -43,6 +43,7 @@ app.use('/api', (req, res) => {
 });
 
 app.get('/', (req, res) => res.redirect('/Home.html'));
+app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use(express.static(webRoot, { extensions: ['html'] }));
 
 // Final error handler: always JSON for API calls, plain text otherwise.

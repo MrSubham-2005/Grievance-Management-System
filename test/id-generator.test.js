@@ -2,12 +2,44 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { nextId, withIdLock } = require('../server/id-generator');
 
-test('nextId starts at 0001 with hyphen for empty student, staff, complaint, and admin tables', async () => {
+test('nextId starts at 0001 with hyphen for empty student, staff, complaint, admin, staff_request, and feedback tables', async () => {
   const emptyDb = { async query() { return { rows: [{ n: 0 }] }; } };
   assert.equal(await nextId('student', 'student_id', 'STU', emptyDb), 'STU-0001');
   assert.equal(await nextId('staff', 'staff_id', 'STF', emptyDb), 'STF-0001');
   assert.equal(await nextId('complaint', 'complaint_id', 'CMP', emptyDb), 'CMP-0001');
   assert.equal(await nextId('admin', 'admin_id', 'ADM', emptyDb), 'ADM-0001');
+  assert.equal(await nextId('staff_request', 'request_id', 'REQ', emptyDb), 'REQ-0001');
+  assert.equal(await nextId('feedback', 'feedback_id', 'FB', emptyDb), 'FB-0001');
+});
+
+test('nextId handles feedback table: empty generates FB-0001, legacy FB0001/FB0002 generates FB-0003, and hyphenated generates monotonic non-duplicate IDs', async () => {
+  // 1. Legacy unhyphenated records FB0001 and FB0002 (max = 2) -> generates FB-0003
+  const legacyDb = {
+    async query(sql, params) {
+      assert.match(sql, /FROM feedback/);
+      assert.deepEqual(params, ['^FB-?[0-9]+$']);
+      return { rows: [{ n: 2 }] };
+    },
+  };
+  assert.equal(await nextId('feedback', 'feedback_id', 'FB', legacyDb), 'FB-0003');
+
+  // 2. Hyphenated records FB-0001 and FB-0002 (max = 2) -> generates FB-0003
+  const hyphenDb = {
+    async query(sql, params) {
+      assert.match(sql, /FROM feedback/);
+      assert.deepEqual(params, ['^FB-?[0-9]+$']);
+      return { rows: [{ n: 2 }] };
+    },
+  };
+  assert.equal(await nextId('feedback', 'feedback_id', 'FB', hyphenDb), 'FB-0003');
+
+  // 3. Monotonic incrementing past FB-0005 -> generates FB-0006 (no duplicates)
+  const populatedDb = {
+    async query() {
+      return { rows: [{ n: 5 }] };
+    },
+  };
+  assert.equal(await nextId('feedback', 'feedback_id', 'FB', populatedDb), 'FB-0006');
 });
 
 test('nextId handles negative/zero max safely and increments legacy/hyphenated IDs monotonically', async () => {

@@ -230,9 +230,19 @@
                 .then(res => res.json())
                 .then(data => {
 
-                    document.getElementById("adminName").textContent = data.adminName;
-                    document.getElementById("adminMobile").textContent = data.mobile;
-                    document.getElementById("adminEmail").innerHTML = data.email.replace("@","@<wbr>");
+                    document.getElementById("adminName").textContent = data.adminName || "";
+                    document.getElementById("adminMobile").textContent = data.mobile || "";
+                    const adminEmailEl = document.getElementById("adminEmail");
+                    adminEmailEl.textContent = "";
+                    const emailText = String(data.email || "");
+                    const atIndex = emailText.indexOf("@");
+                    if (atIndex !== -1) {
+                        adminEmailEl.appendChild(document.createTextNode(emailText.slice(0, atIndex + 1)));
+                        adminEmailEl.appendChild(document.createElement("wbr"));
+                        adminEmailEl.appendChild(document.createTextNode(emailText.slice(atIndex + 1)));
+                    } else {
+                        adminEmailEl.textContent = emailText;
+                    }
 
                 });
 
@@ -244,11 +254,21 @@
 
                     if(!mobile) return "";
 
-                    return mobile.replace(
+                    return String(mobile).replace(
                         /(\d{3})(\d{3})(\d{4})/,
                         "$1-$2-$3"
                     );
 
+                }
+
+                // =====================================
+                // Safe DOM Helpers
+                // =====================================
+
+                function createTextCell(value){
+                    const td = document.createElement("td");
+                    td.textContent = value === null || value === undefined ? "" : String(value);
+                    return td;
                 }
 
                 // =====================================
@@ -259,7 +279,7 @@
 
                     const tbody = document.getElementById("allStudentsData");
 
-                    tbody.innerHTML = "";
+                    tbody.textContent = "";
 
                     const start = (currentPage-1) * rowsPerPage;
                     const end = start + rowsPerPage;
@@ -268,120 +288,66 @@
 
                     if(pageData.length===0){
 
-                        tbody.innerHTML=`
-                            <tr>
-
-                                <td colspan="11" style="text-align:center;">
-
-                                    No Students Found
-
-                                </td>
-
-                            </tr>
-                        `;
+                        const emptyRow = document.createElement("tr");
+                        const emptyCell = document.createElement("td");
+                        emptyCell.colSpan = 11;
+                        emptyCell.style.textAlign = "center";
+                        emptyCell.textContent = "No Students Found";
+                        emptyRow.appendChild(emptyCell);
+                        tbody.appendChild(emptyRow);
 
                     }
 
                     pageData.forEach(function(s){
 
-                        let badge="";
-                        let actionButton="";
+                        const isActive = String(s.status || "").toLowerCase() === "active";
+                        const tr = document.createElement("tr");
 
-                        if((s.status||"").toLowerCase()=="active"){
+                        tr.appendChild(createTextCell(s.studentId));
+                        tr.appendChild(createTextCell(s.studentName));
+                        tr.appendChild(createTextCell(formatMobile(s.mobile)));
+                        tr.appendChild(createTextCell(s.email));
+                        tr.appendChild(createTextCell(s.totalComplaint));
+                        tr.appendChild(createTextCell(s.pending));
+                        tr.appendChild(createTextCell(s.assigned));
+                        tr.appendChild(createTextCell(s.inProgress));
+                        tr.appendChild(createTextCell(s.resolved));
 
-                            badge="badge-active";
+                        const statusTd = document.createElement("td");
+                        const statusBadge = document.createElement("span");
+                        statusBadge.className = "badge " + (isActive ? "badge-active" : "badge-inactive");
+                        statusBadge.textContent = s.status === null || s.status === undefined ? "" : String(s.status);
+                        statusTd.appendChild(statusBadge);
+                        tr.appendChild(statusTd);
 
-                            actionButton=`
+                        const actionTd = document.createElement("td");
+                        const statusForm = document.createElement("form");
+                        statusForm.className = "status-form";
+                        statusForm.dataset.kind = "student";
+                        statusForm.method = "POST";
 
-                            <form class="status-form" data-kind="student" method="POST">
+                        const hiddenInput = document.createElement("input");
+                        hiddenInput.type = "hidden";
+                        hiddenInput.name = "student_id";
+                        hiddenInput.value = s.studentId === null || s.studentId === undefined ? "" : String(s.studentId);
 
-                                <input type="hidden"
-                                    name="student_id"
-                                    value="${s.studentId}">
+                        const actionBtn = document.createElement("button");
+                        actionBtn.type = "submit";
+                        actionBtn.name = "action";
+                        actionBtn.value = isActive ? "inactive" : "active";
+                        actionBtn.className = isActive ? "btn btn-deactivate" : "btn btn-activate";
 
-                                <button
-                                    type="submit"
-                                    name="action"
-                                    value="inactive"
-                                    class="btn btn-deactivate">
+                        const icon = document.createElement("i");
+                        icon.className = isActive ? "fa-solid fa-user-slash" : "fa-solid fa-user-check";
+                        actionBtn.appendChild(icon);
+                        actionBtn.appendChild(document.createTextNode(isActive ? " Inactive" : " Active"));
 
-                                    <i class="fa-solid fa-user-slash"></i>
-                                    Inactive
+                        statusForm.appendChild(hiddenInput);
+                        statusForm.appendChild(actionBtn);
+                        actionTd.appendChild(statusForm);
+                        tr.appendChild(actionTd);
 
-                                </button>
-
-                            </form>
-
-                            `;
-
-                        }else{
-
-                            badge="badge-inactive";
-
-                            actionButton=`
-
-                            <form class="status-form" data-kind="student" method="POST">
-
-                                <input type="hidden"
-                                    name="student_id"
-                                    value="${s.studentId}">
-
-                                <button
-                                    type="submit"
-                                    name="action"
-                                    value="active"
-                                    class="btn btn-activate">
-
-                                    <i class="fa-solid fa-user-check"></i>
-                                    Active
-
-                                </button>
-
-                            </form>
-
-                            `;
-
-                        }
-
-                        tbody.innerHTML+=`
-
-                        <tr>
-
-                            <td>${s.studentId}</td>
-
-                            <td>${s.studentName}</td>
-
-                            <td>${formatMobile(s.mobile)}</td>
-
-                            <td>${s.email}</td>
-
-                            <td>${s.totalComplaint}</td>
-
-                            <td>${s.pending}</td>
-
-                            <td>${s.assigned}</td>
-
-                            <td>${s.inProgress}</td>
-
-                            <td>${s.resolved}</td>
-
-                            <td>
-
-                                <span class="badge ${badge}">
-                                    ${s.status}
-                                </span>
-
-                            </td>
-
-                            <td>
-
-                                ${actionButton}
-
-                            </td>
-
-                        </tr>
-
-                        `;
+                        tbody.appendChild(tr);
 
                     });
 
@@ -389,7 +355,7 @@
 
                     if(totalPages===0) totalPages=1;
 
-                    document.getElementById("pageInfo").innerHTML=
+                    document.getElementById("pageInfo").textContent=
                         "Page "+currentPage+" of "+totalPages;
 
                     document.getElementById("prevBtn").disabled=
@@ -441,20 +407,16 @@
 
                         console.error(error);
 
-                        document.getElementById("allStudentsData").innerHTML=`
-
-                            <tr>
-
-                                <td colspan="11"
-                                    style="text-align:center;color:red;">
-
-                                    Failed to load students.
-
-                                </td>
-
-                            </tr>
-
-                        `;
+                        const tbody = document.getElementById("allStudentsData");
+                        tbody.textContent = "";
+                        const errRow = document.createElement("tr");
+                        const errCell = document.createElement("td");
+                        errCell.colSpan = 11;
+                        errCell.style.textAlign = "center";
+                        errCell.style.color = "red";
+                        errCell.textContent = "Failed to load students.";
+                        errRow.appendChild(errCell);
+                        tbody.appendChild(errRow);
 
                     });
 

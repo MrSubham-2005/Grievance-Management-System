@@ -544,8 +544,8 @@ test('GET /api/student/complaints returns exact complaint.status for Owner and J
   assert.match(studentStatusHtml, /badge-assigned/);
   assert.match(studentStatusHtml, /badge-in-progress/);
   assert.match(studentStatusHtml, /badge-resolved/);
-  assert.match(studentStatusHtml, /badge-overdue/);
-  assert.match(studentStatusHtml, /Overdue/);
+  assert.doesNotMatch(studentStatusHtml, /badge-overdue/);
+  assert.doesNotMatch(studentStatusHtml, /Overdue/);
   assert.match(studentStatusHtml, /setInterval\(/);
   assert.match(studentStatusHtml, /visibilitychange/);
 

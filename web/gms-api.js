@@ -31,9 +31,45 @@
         return data;
     }
 
+    var logoutInProgress = false;
+
+    async function performLogout(triggerEl) {
+        if (logoutInProgress) return false;
+        logoutInProgress = true;
+        if (triggerEl) {
+            if (typeof triggerEl.setAttribute === "function") {
+                triggerEl.setAttribute("aria-busy", "true");
+            }
+            if (triggerEl.style) {
+                triggerEl.style.pointerEvents = "none";
+            }
+        }
+        try {
+            const data = await call("POST", "/api/auth/logout", {});
+            if (!data || data.ok !== true) {
+                throw new Error((data && data.error) || "Could not sign you out. Please try again.");
+            }
+            window.location.replace(data.redirect || "/Home.html");
+            return true;
+        } catch (err) {
+            logoutInProgress = false;
+            if (triggerEl) {
+                if (typeof triggerEl.removeAttribute === "function") {
+                    triggerEl.removeAttribute("aria-busy");
+                }
+                if (triggerEl.style) {
+                    triggerEl.style.pointerEvents = "";
+                }
+            }
+            alert((err && err.message) || "Could not sign you out. Please try again.");
+            return false;
+        }
+    }
+
     window.GMS = {
         get: function (url) { return call("GET", url); },
         post: function (url, body) { return call("POST", url, body || {}); },
+        logout: performLogout,
         // Sends a form's fields as JSON, using the field names the API expects.
         formData: function (form) {
             const data = {};
@@ -53,6 +89,16 @@
         // Moves the user on after success, or to the login page after a session error.
         go: function (url) { window.location.href = url; },
     };
+
+    // Intercept Logout clicks across all authenticated portal pages so the server-side
+    // session is destroyed before redirecting to Home.html.
+    document.addEventListener("click", function (event) {
+        var target = event.target;
+        var logoutLink = target && typeof target.closest === "function" ? target.closest("a.logout-link") : null;
+        if (!logoutLink) return;
+        event.preventDefault();
+        performLogout(logoutLink);
+    });
 
     // Portal pages need a signed-in session for their role. Public pages (Home, login,
     // signup, forgot password) are left alone. Signed-out visitors are sent to the login
